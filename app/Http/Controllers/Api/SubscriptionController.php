@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\TeamInvitation;
 use App\Models\User;
 use App\Services\FlowService;
+use App\Services\AiUsageService;
 use App\Services\ChatwootService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,10 +20,12 @@ use Illuminate\Support\Facades\Mail;
 class SubscriptionController extends Controller
 {
     private FlowService $flow;
+    private AiUsageService $aiUsage;
 
-    public function __construct(FlowService $flow)
+    public function __construct(FlowService $flow, AiUsageService $aiUsage)
     {
         $this->flow = $flow;
+        $this->aiUsage = $aiUsage;
     }
 
     /* ═══════════════════════════════════════════
@@ -90,6 +93,65 @@ class SubscriptionController extends Controller
             'per_member'  => $perMember,
             'total_price' => $totalPrice,
             'is_active'   => true,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/usage
+       Current AI usage stats for the company
+       ═══════════════════════════════════════════ */
+
+    public function usage(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $company = Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json([
+                'messages_used' => 0,
+                'messages_limit' => config('billing.plans.free.ai_messages', 500),
+                'remaining' => config('billing.plans.free.ai_messages', 500),
+                'percentage' => 0,
+                'has_reached_limit' => false,
+                'period' => now()->format('Y-m'),
+            ]);
+        }
+
+        return response()->json($this->aiUsage->getUsageStats($company->id));
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/plans
+       Available plans and pricing
+       ═══════════════════════════════════════════ */
+
+    public function plans(Request $request): JsonResponse
+    {
+        $plans = config('billing.plans', []);
+        $formatted = [];
+
+        foreach ($plans as $key => $plan) {
+            $formatted[] = [
+                'id' => $key,
+                'name' => $plan['name'],
+                'price_monthly' => $plan['price_monthly'],
+                'price_annual' => $plan['price_annual'],
+                'ai_messages' => $plan['ai_messages'],
+                'channels' => $plan['channels'],
+                'max_members' => $plan['max_members'],
+                'members_included' => $plan['members_included'] ?? $plan['max_members'],
+                'max_documents' => $plan['max_documents'],
+                'max_workflows' => $plan['max_workflows'],
+                'available_models' => $plan['available_models'],
+                'support' => $plan['support'],
+            ];
+        }
+
+        return response()->json([
+            'plans' => $formatted,
+            'currency' => config('billing.currency', 'CLP'),
+            'per_member_monthly' => config('billing.per_member_monthly'),
+            'per_member_annual' => config('billing.per_member_annual'),
         ]);
     }
 

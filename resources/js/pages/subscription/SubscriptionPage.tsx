@@ -1,4 +1,4 @@
-// SubscriptionPage – v3.2 — WITHMIA 1.0.3
+// SubscriptionPage – v4.0 — WITHMIA 1.0.4 (4-tier pricing + AI usage tracking)
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CreditCard,
@@ -29,6 +29,9 @@ import {
   ArrowUpRight,
   Calendar,
   Star,
+  TrendingUp,
+  Building2,
+  Rocket,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -85,34 +88,99 @@ interface TeamInvitation {
 }
 
 /* ═══════════════════════════════════════════
-   PLAN DATA
+   PLAN DATA (4 tiers)
    ═══════════════════════════════════════════ */
-const FREE_VS_PRO = [
-  { feature: 'Canales', free: 'Solo WhatsApp', pro: 'WhatsApp, Instagram, Facebook, Email, Web' },
-  { feature: 'Mensajes IA/mes', free: '500', pro: 'Ilimitados' },
-  { feature: 'Herramientas', free: '1 conectada', pro: 'Todas ilimitadas' },
-  { feature: 'Modelos IA', free: 'Básico', pro: 'GPT-4o, Claude, Gemini' },
-  { feature: 'Base de conocimiento', free: '—', pro: 'Documentos, web, datos' },
-  { feature: 'Analíticas', free: '—', pro: 'Dashboard completo' },
-  { feature: 'Miembros de equipo', free: '1', pro: '1 incluido + adicionales' },
-  { feature: 'Soporte', free: 'Comunidad', pro: 'Prioritario' },
+interface PlanDef {
+  id: string;
+  name: string;
+  subtitle: string;
+  icon: typeof Zap;
+  priceMonthly: number;
+  priceAnnual: number;
+  aiMessages: string;
+  channels: string;
+  members: string;
+  models: string;
+  knowledge: string;
+  workflows: string;
+  support: string;
+  analytics: string;
+  highlighted?: boolean;
+  badge?: string;
+  flowPlanKey?: string;
+}
+
+const PLANS: PlanDef[] = [
+  {
+    id: 'free', name: 'Gratis', subtitle: 'Para explorar', icon: Zap,
+    priceMonthly: 0, priceAnnual: 0,
+    aiMessages: '500', channels: 'Solo WhatsApp', members: '1',
+    models: 'Básico', knowledge: '—', workflows: '—',
+    support: 'Comunidad', analytics: 'Básicas',
+  },
+  {
+    id: 'pro', name: 'Pro', subtitle: 'Para emprendedores', icon: Rocket,
+    priceMonthly: 24990, priceAnnual: 254990,
+    aiMessages: '2.000', channels: '5 canales', members: '1 + extras',
+    models: 'GPT-4o-mini, GPT-4o', knowledge: '10 documentos', workflows: '3',
+    support: 'Email', analytics: 'Completas',
+    highlighted: true, badge: 'Popular',
+    flowPlanKey: 'pro',
+  },
+  {
+    id: 'business', name: 'Business', subtitle: 'Para pymes', icon: Building2,
+    priceMonthly: 44990, priceAnnual: 459990,
+    aiMessages: '8.000', channels: '5 canales + API', members: '3 + extras',
+    models: 'GPT-4o, Claude', knowledge: '50 documentos', workflows: '10',
+    support: 'Prioritario', analytics: 'Completas + exportación',
+    flowPlanKey: 'business',
+  },
+  {
+    id: 'enterprise', name: 'Enterprise', subtitle: 'Para empresas', icon: Crown,
+    priceMonthly: 149990, priceAnnual: 1529990,
+    aiMessages: '25.000', channels: 'Todos + custom', members: '10 + extras',
+    models: 'Todos + fine-tuning', knowledge: 'Ilimitados', workflows: 'Ilimitados',
+    support: 'CSM dedicado', analytics: 'Completas + API',
+    flowPlanKey: 'enterprise',
+  },
+];
+
+const PLAN_FEATURES = [
+  { label: 'Mensajes IA/mes', key: 'aiMessages' as const },
+  { label: 'Canales', key: 'channels' as const },
+  { label: 'Miembros', key: 'members' as const },
+  { label: 'Modelos IA', key: 'models' as const },
+  { label: 'Base de conocimiento', key: 'knowledge' as const },
+  { label: 'Workflows', key: 'workflows' as const },
+  { label: 'Analíticas', key: 'analytics' as const },
+  { label: 'Soporte', key: 'support' as const },
 ];
 
 const PRO_HIGHLIGHTS = [
-  { icon: Bot, text: 'IA ilimitada 24/7' },
+  { icon: Bot, text: 'IA 2.000 msgs/mes' },
   { icon: Globe, text: 'Omnicanal completo' },
-  { icon: Sparkles, text: 'Modelos avanzados' },
+  { icon: Sparkles, text: 'GPT-4o-mini + GPT-4o' },
   { icon: FileText, text: 'Base de conocimiento' },
   { icon: BarChart3, text: 'Analíticas' },
   { icon: Users, text: 'Multi-agente' },
-  { icon: Headphones, text: 'Soporte prioritario' },
+  { icon: Headphones, text: 'Soporte email' },
   { icon: Shield, text: 'Seguridad empresarial' },
 ];
+
+interface AiUsageStats {
+  messages_used: number;
+  messages_limit: number;
+  remaining: number;
+  percentage: number;
+  has_reached_limit: boolean;
+  period: string;
+}
 
 const FAQ_ITEMS = [
   { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, puedes cancelar tu suscripción cuando quieras. Mantendrás el acceso hasta el final del período de facturación.' },
   { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) y otros medios de pago locales a través de Flow.cl, plataforma de pagos regulada en Chile.' },
-  { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional de $9.990/mes (o $95.990/año) por cada miembro extra. El cobro se gestiona automáticamente al invitar desde la sección de equipo.' },
+  { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional de $10.500/mes (o $107.100/año) por cada miembro extra. El cobro se gestiona automáticamente al invitar desde la sección de equipo.' },
+  { q: '¿Qué pasa si excedo mis mensajes IA?', a: 'El bot dejará de responder automáticamente cuando alcances el límite. Puedes contratar un pack de 1.000 mensajes extras por $5.990 CLP o subir de plan para obtener más capacidad.' },
   { q: '¿Hay algún contrato o permanencia mínima?', a: 'No, no hay contratos ni permanencia mínima. Pagas mes a mes o año a año, sin compromiso.' },
   { q: '¿Los precios incluyen IVA?', a: 'Sí. Todos los precios publicados incluyen IVA (19%).' },
 ];
@@ -174,11 +242,14 @@ export default function SubscriptionPage() {
   const [inviteRole, setInviteRole] = useState<'agent' | 'administrator'>('agent');
   const [inviting, setInviting] = useState(false);
 
+  // AI usage state
+  const [aiUsage, setAiUsage] = useState<AiUsageStats | null>(null);
+
   // Pricing (CLP – IVA incluido)
-  const BASE_MONTHLY = 19990;
-  const BASE_ANNUAL = 189990;
-  const MEMBER_MONTHLY = 9990;
-  const MEMBER_ANNUAL = 95990;
+  const BASE_MONTHLY = 24990;
+  const BASE_ANNUAL = 254990;
+  const MEMBER_MONTHLY = 10500;
+  const MEMBER_ANNUAL = 107100;
 
   const basePrice = billingCycle === 'monthly' ? BASE_MONTHLY : BASE_ANNUAL;
   const perMemberPrice = billingCycle === 'monthly' ? MEMBER_MONTHLY : MEMBER_ANNUAL;
@@ -218,14 +289,28 @@ export default function SubscriptionPage() {
 
   useEffect(() => { fetchBilling(); fetchTeam(); }, [fetchBilling, fetchTeam]);
 
+  // ── Fetch AI usage ──
+  const fetchAiUsage = useCallback(async () => {
+    try {
+      const res = await fetch('/api/subscription/usage', {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+      });
+      if (res.ok) setAiUsage(await res.json());
+    } catch (err) { console.error('Error fetching AI usage:', err); }
+  }, []);
+
+  useEffect(() => { fetchAiUsage(); }, [fetchAiUsage]);
+
   // Auto-subscribe from ?plan= param
   useEffect(() => {
     const p = new URLSearchParams(window.location.search).get('plan');
-    if (p && (p === 'pro-monthly' || p === 'pro-annual') && !isAutoTriggered.current) {
+    if (p && ['pro-monthly', 'pro-annual', 'business-monthly', 'business-annual', 'enterprise-monthly', 'enterprise-annual'].includes(p) && !isAutoTriggered.current) {
       isAutoTriggered.current = true;
-      const cycle = p === 'pro-annual' ? 'annual' : 'monthly';
+      const cycle = p.endsWith('-annual') ? 'annual' : 'monthly';
+      const planId = p.replace(/-monthly$|-annual$/, '');
       setBillingCycle(cycle);
-      setTimeout(() => handleSubscribeWithCycle(cycle), 800);
+      setTimeout(() => handleSubscribeWithCycle(cycle, planId), 800);
       const url = new URL(window.location.href); url.searchParams.delete('plan');
       window.history.replaceState({}, '', url.toString());
     }
@@ -236,15 +321,15 @@ export default function SubscriptionPage() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleSubscribe = () => handleSubscribeWithCycle(billingCycle);
+  const handleSubscribe = (planId = 'pro') => handleSubscribeWithCycle(billingCycle, planId);
 
-  const handleSubscribeWithCycle = async (cycle: 'monthly' | 'annual') => {
+  const handleSubscribeWithCycle = async (cycle: 'monthly' | 'annual', planId = 'pro') => {
     setSubscribing(true);
     try {
       const res = await fetch('/api/subscription/checkout', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
-        body: JSON.stringify({ billing_cycle: cycle }),
+        body: JSON.stringify({ billing_cycle: cycle, plan: planId }),
       });
       const data = await res.json();
       if (data.checkout_url) window.location.href = data.checkout_url;
@@ -383,7 +468,7 @@ export default function SubscriptionPage() {
               <div>
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-lg font-bold text-white">
-                    {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba gratuita' : 'Plan Gratuito'}
+                    {isActive ? `WITHMIA ${sub?.plan_name || 'Pro'}` : isTrial ? 'Prueba gratuita' : 'Plan Gratuito'}
                   </h2>
                   <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${
                     isActive ? 'bg-emerald-400/25 text-emerald-100' : isTrial ? 'bg-amber-400/25 text-amber-100' : 'bg-white/15 text-white/70'
@@ -417,26 +502,68 @@ export default function SubscriptionPage() {
           {/* ── Body ── */}
           <div className="p-6">
             {isActive ? (
-              /* Active: 3-col stat cards */
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <StatCard
-                  icon={Calendar} label="Facturación" t={t} isDark={isDark}
-                  value={sub?.billing_cycle === 'annual' ? 'Anual' : 'Mensual'}
-                  sub={sub?.ends_at ? `Próxima: ${formatDate(sub.ends_at)}` : sub?.starts_at ? `Desde: ${formatDate(sub.starts_at)}` : undefined}
-                />
-                <StatCard
-                  icon={Users} label="Equipo" t={t} isDark={isDark}
-                  value={`${teamCount} ${teamCount === 1 ? 'miembro' : 'miembros'}`}
-                  sub={extraMembers > 0 ? `1 incluido + ${extraMembers} extra${extraMembers > 1 ? 's' : ''}` : '1 miembro incluido'}
-                />
-                <StatCard
-                  icon={CreditCard} label="Total" t={t} isDark={isDark}
-                  value={`$${formatCLP(totalCost)} CLP`}
-                  sub={extraMembers > 0 ? `$${formatCLP(basePrice)} base + $${formatCLP(extraMembers * perMemberPrice)} extras` : `/${billingCycle === 'monthly' ? 'mes' : 'año'}`}
-                />
+              /* Active: stat cards + AI usage */
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <StatCard
+                    icon={Calendar} label="Facturación" t={t} isDark={isDark}
+                    value={sub?.billing_cycle === 'annual' ? 'Anual' : 'Mensual'}
+                    sub={sub?.ends_at ? `Próxima: ${formatDate(sub.ends_at)}` : sub?.starts_at ? `Desde: ${formatDate(sub.starts_at)}` : undefined}
+                  />
+                  <StatCard
+                    icon={Users} label="Equipo" t={t} isDark={isDark}
+                    value={`${teamCount} ${teamCount === 1 ? 'miembro' : 'miembros'}`}
+                    sub={extraMembers > 0 ? `1 incluido + ${extraMembers} extra${extraMembers > 1 ? 's' : ''}` : '1 miembro incluido'}
+                  />
+                  <StatCard
+                    icon={CreditCard} label="Total" t={t} isDark={isDark}
+                    value={`$${formatCLP(totalCost)} CLP`}
+                    sub={extraMembers > 0 ? `$${formatCLP(basePrice)} base + $${formatCLP(extraMembers * perMemberPrice)} extras` : `/${billingCycle === 'monthly' ? 'mes' : 'año'}`}
+                  />
+                </div>
+
+                {/* AI Usage Bar */}
+                {aiUsage && (
+                  <div className={`p-4 rounded-xl ${!t ? 'bg-neutral-50' : ''}`} style={t ? { background: t.subtleBg } : undefined}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Bot className={`w-4 h-4 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                        <span className={`text-[11px] font-semibold uppercase tracking-wider ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                          Mensajes IA — {aiUsage.period}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-medium ${aiUsage.percentage >= 90 ? 'text-red-500' : aiUsage.percentage >= 70 ? 'text-amber-500' : (!t ? 'text-neutral-500' : '')}`}
+                        style={aiUsage.percentage < 70 && t ? { color: t.textSec } : undefined}
+                      >
+                        {aiUsage.messages_used.toLocaleString('es-CL')} / {aiUsage.messages_limit.toLocaleString('es-CL')}
+                      </span>
+                    </div>
+                    <div className={`w-full h-2 rounded-full overflow-hidden ${!t ? 'bg-neutral-200' : ''}`}
+                      style={t ? { background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' } : undefined}
+                    >
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          aiUsage.percentage >= 90 ? 'bg-red-500' : aiUsage.percentage >= 70 ? 'bg-amber-500' : (!t ? 'bg-indigo-500' : '')
+                        }`}
+                        style={{
+                          width: `${Math.min(aiUsage.percentage, 100)}%`,
+                          ...(aiUsage.percentage < 70 && t ? { background: t.accent } : {}),
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                        {aiUsage.remaining.toLocaleString('es-CL')} restantes
+                      </span>
+                      {aiUsage.has_reached_limit && (
+                        <span className="text-xs font-medium text-red-500">Límite alcanzado — el bot no responderá</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              /* Free: plan comparison + upgrade CTA */
+              /* Free: 4-tier pricing grid + upgrade CTA */
               <div>
                 {/* Toggle */}
                 <div className="flex items-center justify-center gap-3 mb-6">
@@ -454,76 +581,121 @@ export default function SubscriptionPage() {
                     style={t ? { color: billingCycle === 'annual' ? t.textPrimary : t.textMuted } : undefined}
                   >Anual</span>
                   {billingCycle === 'annual' && (
-                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Ahorra 20%</span>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Ahorra 15%</span>
                   )}
                 </div>
 
-                {/* Side-by-side */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Free card */}
-                  <div className={`rounded-xl p-5 border ${!t ? 'border-neutral-200 bg-neutral-50/60' : ''}`}
-                    style={t ? { border: `1px solid ${t.cardBorder}`, background: t.subtleBg } : undefined}
-                  >
-                    <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Plan actual</p>
-                    <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Gratuito</h3>
-                    <p className={`text-3xl font-bold mt-1 mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                      $0 <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>/mes</span>
-                    </p>
-                    <div className="space-y-2.5">
-                      {FREE_VS_PRO.map((r, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          {r.free === '—'
-                            ? <X className={`w-4 h-4 mt-0.5 shrink-0 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: isDark ? '#475569' : '#cbd5e1' } : undefined} />
-                            : <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />}
-                          <span className={`text-sm ${r.free === '—' ? (!t ? 'text-neutral-400' : '') : (!t ? 'text-neutral-600' : '')}`}
-                            style={t ? { color: r.free === '—' ? t.textMuted : t.textSec } : undefined}
-                          >
-                            {r.feature} <span className="opacity-60">· {r.free}</span>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {/* 4-tier cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {PLANS.map((plan) => {
+                    const PlanIcon = plan.icon;
+                    const monthlyDisplay = billingCycle === 'annual' && plan.priceAnnual > 0
+                      ? Math.round(plan.priceAnnual / 12)
+                      : plan.priceMonthly;
+                    const isCurrentFree = plan.id === 'free';
+                    const isHighlighted = plan.highlighted;
 
-                  {/* Pro card */}
-                  <div className={`rounded-xl p-5 border-2 relative ${!t ? 'border-indigo-500 bg-white shadow-lg shadow-indigo-100/60' : ''}`}
-                    style={t ? { border: `2px solid ${t.accent}`, background: isDark ? 'rgba(0,0,0,0.3)' : '#fff', boxShadow: `0 8px 30px -8px color-mix(in srgb, ${t.accent} 18%, transparent)` } : undefined}
-                  >
-                    <div className="absolute -top-3 right-5">
-                      <span className="px-3 py-1 bg-amber-400 text-amber-900 text-[10px] font-bold uppercase tracking-wide rounded-full shadow-sm">
-                        Recomendado
-                      </span>
-                    </div>
-                    <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>WITHMIA Pro</p>
-                    <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Todo incluido</h3>
-                    <div className="mt-1 mb-1">
-                      <span className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                        ${billingCycle === 'annual' ? formatCLP(Math.round(BASE_ANNUAL / 12)) : formatCLP(BASE_MONTHLY)}
-                      </span>
-                      <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
-                    </div>
-                    <p className={`text-xs mb-4 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                      {billingCycle === 'annual' ? `$${formatCLP(BASE_ANNUAL)} facturado al año` : 'IVA incluido · 1 miembro incluido'}
-                    </p>
-                    <div className="space-y-2.5">
-                      {FREE_VS_PRO.map((r, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <Check className={`w-4 h-4 mt-0.5 shrink-0 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined} />
-                          <span className={`text-sm ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                            {r.feature} <span className="opacity-50">· {r.pro}</span>
-                          </span>
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`rounded-xl p-5 border relative flex flex-col ${
+                          isHighlighted
+                            ? (!t ? 'border-indigo-500 border-2 bg-white shadow-lg shadow-indigo-100/60' : '')
+                            : isCurrentFree
+                              ? (!t ? 'border-neutral-200 bg-neutral-50/60' : '')
+                              : (!t ? 'border-neutral-200 bg-white' : '')
+                        }`}
+                        style={t ? {
+                          border: isHighlighted ? `2px solid ${t.accent}` : `1px solid ${t.cardBorder}`,
+                          background: isCurrentFree ? t.subtleBg : (isDark ? 'rgba(0,0,0,0.3)' : '#fff'),
+                          ...(isHighlighted ? { boxShadow: `0 8px 30px -8px color-mix(in srgb, ${t.accent} 18%, transparent)` } : {}),
+                        } : undefined}
+                      >
+                        {plan.badge && (
+                          <div className="absolute -top-3 right-4">
+                            <span className="px-3 py-1 bg-amber-400 text-amber-900 text-[10px] font-bold uppercase tracking-wide rounded-full shadow-sm">
+                              {plan.badge}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 mb-1">
+                          <PlanIcon className={`w-4 h-4 ${isHighlighted ? (!t ? 'text-indigo-500' : '') : (!t ? 'text-neutral-400' : '')}`}
+                            style={t ? { color: isHighlighted ? t.accent : t.textMuted } : undefined}
+                          />
+                          <p className={`text-[11px] font-semibold uppercase tracking-wider ${isHighlighted ? (!t ? 'text-indigo-500' : '') : (!t ? 'text-neutral-400' : '')}`}
+                            style={t ? { color: isHighlighted ? t.accent : t.textMuted } : undefined}
+                          >
+                            {plan.name}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={handleSubscribe}
-                      disabled={subscribing}
-                      className={`w-full mt-5 py-3 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${!t ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'hover:opacity-90'}`}
-                      style={t ? { background: t.accent } : undefined}
-                    >
-                      {subscribing ? <><Loader className="w-4 h-4 animate-spin" /> Procesando...</> : <>Comenzar con Pro <ArrowUpRight className="w-4 h-4" /></>}
-                    </button>
-                  </div>
+
+                        <p className={`text-xs mb-2 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                          {plan.subtitle}
+                        </p>
+
+                        <div className="mb-3">
+                          <span className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                            {monthlyDisplay === 0 ? '$0' : `$${formatCLP(monthlyDisplay)}`}
+                          </span>
+                          <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
+                          {billingCycle === 'annual' && plan.priceAnnual > 0 && (
+                            <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                              ${formatCLP(plan.priceAnnual)} facturado al año
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 flex-1">
+                          {PLAN_FEATURES.map((feat) => {
+                            const val = plan[feat.key];
+                            const disabled = val === '—';
+                            return (
+                              <div key={feat.key} className="flex items-start gap-2">
+                                {disabled
+                                  ? <X className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: isDark ? '#475569' : '#cbd5e1' } : undefined} />
+                                  : <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isHighlighted ? (!t ? 'text-indigo-500' : '') : 'text-emerald-500'}`}
+                                      style={isHighlighted && t ? { color: t.accent } : undefined}
+                                    />
+                                }
+                                <span className={`text-xs ${disabled ? (!t ? 'text-neutral-400' : '') : (!t ? 'text-neutral-600' : '')}`}
+                                  style={t ? { color: disabled ? t.textMuted : t.textSec } : undefined}
+                                >
+                                  {feat.label} <span className="opacity-60">· {val}</span>
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {isCurrentFree ? (
+                          <div className={`mt-4 py-2.5 text-center text-xs font-medium rounded-lg ${!t ? 'bg-neutral-100 text-neutral-400' : ''}`}
+                            style={t ? { background: t.subtleBg, color: t.textMuted } : undefined}
+                          >
+                            Plan actual
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleSubscribe(plan.id)}
+                            disabled={subscribing}
+                            className={`w-full mt-4 py-2.5 text-sm rounded-lg font-semibold transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${
+                              isHighlighted
+                                ? (!t ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'text-white hover:opacity-90')
+                                : (!t ? 'border border-neutral-300 text-neutral-700 hover:bg-neutral-50' : 'hover:opacity-80')
+                            }`}
+                            style={t ? (isHighlighted
+                              ? { background: t.accent }
+                              : { border: `1px solid ${t.cardBorder}`, color: t.textPrimary }
+                            ) : undefined}
+                          >
+                            {subscribing ? <Loader className="w-4 h-4 animate-spin" /> : null}
+                            {plan.id === 'enterprise' ? 'Contactar ventas' : `Elegir ${plan.name}`}
+                            {!subscribing && <ArrowUpRight className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

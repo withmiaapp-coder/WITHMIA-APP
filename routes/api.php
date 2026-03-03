@@ -174,6 +174,8 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
 // ============================================================================
 Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::get('/', [SubscriptionController::class, 'index']);
+    Route::get('/usage', [SubscriptionController::class, 'usage']);
+    Route::get('/plans', [SubscriptionController::class, 'plans']);
     Route::post('/checkout', [SubscriptionController::class, 'checkout']);
     Route::post('/checkout-member', [SubscriptionController::class, 'checkoutMember']);
     Route::get('/callback', [SubscriptionController::class, 'callback']);

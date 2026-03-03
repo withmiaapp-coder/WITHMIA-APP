@@ -2,6 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\AiUsage;
+use App\Models\Company;
+use App\Services\AiUsageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -16,6 +19,8 @@ use Illuminate\Support\Facades\Log;
  * Antes esto se hacía de forma síncrona en el webhook controller, 
  * bloqueando un worker de Octane hasta 14 segundos con usleep().
  * Ahora se ejecuta en la cola sin bloquear workers.
+ * 
+ * Incluye AI usage tracking y enforcement de límites por plan.
  */
 class ForwardToN8nWithEnrichmentJob implements ShouldQueue
 {
@@ -134,6 +139,38 @@ class ForwardToN8nWithEnrichmentJob implements ShouldQueue
                         'total_retries' => $maxRetries,
                     ]);
                 }
+            }
+
+            // ══════════════════════════════════════════════
+            // AI USAGE TRACKING + LIMIT ENFORCEMENT
+            // ══════════════════════════════════════════════
+            $company = Company::where('slug', $this->instanceSlug)->first();
+            if ($company) {
+                $aiUsageService = app(AiUsageService::class);
+
+                // Check if company has reached AI message limit
+                if (!$aiUsageService->canSendMessage($company->id)) {
+                    Log::warning('🚫 AI limit reached — skipping n8n forward', [
+                        'company_id' => $company->id,
+                        'instance' => $this->instanceSlug,
+                    ]);
+                    // Don't forward to n8n — bot won't respond
+                    // The message still exists in Chatwoot for human agents
+                    return;
+                }
+
+                // Record the AI message (pre-count — n8n will process it)
+                $aiUsageService->recordMessage($company->id);
+
+                // Inject AI usage info + model config into the n8n payload
+                $usageStats = $aiUsageService->getUsageStats($company->id);
+                $modelConfig = $aiUsageService->getRecommendedModel($company->id);
+
+                $this->data['_withmia'] = [
+                    'ai_usage' => $usageStats,
+                    'model' => $modelConfig,
+                    'company_id' => $company->id,
+                ];
             }
 
             // Reenviar a n8n

@@ -193,11 +193,13 @@ class Company extends Model
         return [
             'name' => $sub->plan_name ?? 'Pro',
             'status' => $isTrialing ? 'trialing' : $sub->status,
-            'badge_color' => match ($sub->status) {
-                'active' => 'green',
-                'trialing' => 'amber',
-                'past_due' => 'red',
-                'cancelled' => 'gray',
+            'badge_color' => match (true) {
+                $sub->status === 'past_due' => 'red',
+                $sub->status === 'cancelled' => 'gray',
+                $isTrialing => 'amber',
+                strtolower($sub->plan_name ?? '') === 'enterprise' => 'purple',
+                strtolower($sub->plan_name ?? '') === 'business' => 'blue',
+                $sub->status === 'active' => 'green',
                 default => 'gray',
             },
             'trial_days' => $isTrialing ? $sub->trialDaysRemaining() : null,
