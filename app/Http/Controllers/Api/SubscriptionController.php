@@ -581,19 +581,93 @@ class SubscriptionController extends Controller
             ], 400);
         }
 
-        if (!$this->flow->isConfigured()) {
-            return response()->json(['message' => 'El sistema de pagos no está configurado.'], 500);
-        }
-
         // Determine price based on billing cycle
         $billingCycle = $subscription->billing_cycle ?? 'monthly';
-        $amount       = $billingCycle === 'annual'
+        $amountCLP    = $billingCycle === 'annual'
             ? (int) config('billing.per_member_annual')
             : (int) config('billing.per_member_monthly');
 
         $cycleName = $billingCycle === 'annual' ? 'Anual' : 'Mensual';
 
+        // ── Determine gateway: use dLocal if subscription was paid with dLocal, otherwise Flow ──
+        $paymentMethod = $subscription->payment_info['payment_method'] ?? 'flow';
+        $hasDLocalCard = !empty($subscription->payment_info['dlocal_card_id']);
+        $useDLocal = ($paymentMethod === 'dlocal' || $hasDLocalCard) && $this->dlocal->isSmartFieldsConfigured();
+        $useFlow   = !$useDLocal && $this->flow->isConfigured();
+
+        if (!$useDLocal && !$useFlow) {
+            return response()->json(['message' => 'El sistema de pagos no está configurado.'], 500);
+        }
+
         try {
+            if ($useDLocal && $hasDLocalCard) {
+                // ── dLocal recurring charge with saved card ──
+                $geo = $this->currency->detectCountry($request->ip());
+                $countryCode  = $subscription->payment_info['country'] ?? $geo['country_code'];
+                $userCurrency = $subscription->payment_info['currency'] ?? $geo['currency'];
+
+                $converted = $this->currency->convertFromCLP($amountCLP, $userCurrency);
+                $orderId   = "withmia-member-{$company->id}-" . time();
+
+                $baseUrl = config('app.url');
+                $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
+
+                $payer = [
+                    'name'  => $subscription->payment_info['payer_name'] ?? $user->name,
+                    'email' => $user->email,
+                ];
+
+                $result = $this->dlocal->chargeWithCardId(
+                    $subscription->payment_info['dlocal_card_id'],
+                    $orderId,
+                    $converted['amount'],
+                    $converted['currency'],
+                    $countryCode,
+                    $payer,
+                    $notificationUrl,
+                    [
+                        'type'          => 'member_addon',
+                        'company_id'    => $company->id,
+                        'invited_by'    => $user->id,
+                        'invite_email'  => $email,
+                        'invite_name'   => $request->name,
+                        'invite_role'   => $request->role,
+                        'invite_team'   => $request->team_id,
+                        'billing_cycle' => $billingCycle,
+                    ]
+                );
+
+                $status = strtoupper($result['status'] ?? 'PENDING');
+
+                Log::info('dLocal member checkout created', [
+                    'company_id'   => $company->id,
+                    'invite_email' => $email,
+                    'amount'       => $converted['amount'],
+                    'currency'     => $converted['currency'],
+                    'status'       => $status,
+                ]);
+
+                // If 3DS redirect needed
+                if (!empty($result['three_dsecure']['redirect_url'])) {
+                    return response()->json([
+                        'checkout_url' => $result['three_dsecure']['redirect_url'],
+                        'amount'       => $converted['amount'],
+                        'currency'     => $converted['currency'],
+                        'gateway'      => 'dlocal',
+                    ]);
+                }
+
+                return response()->json([
+                    'success'    => true,
+                    'status'     => $this->dlocal->mapStatus($status),
+                    'amount'     => $converted['amount'],
+                    'currency'   => $converted['currency'],
+                    'gateway'    => 'dlocal',
+                    'payment_id' => $result['id'] ?? null,
+                ]);
+            }
+
+            // ── Flow.cl checkout ──
             $baseUrl    = config('app.url');
             $returnUrl  = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.return_url'));
             $confirmUrl = $baseUrl . config('billing.flow.webhook_url');
@@ -603,7 +677,7 @@ class SubscriptionController extends Controller
             $paymentResult = $this->flow->createPayment(
                 $commerceOrder,
                 "Miembro adicional WITHMIA ({$cycleName})",
-                $amount,
+                $amountCLP,
                 $user->email,
                 $confirmUrl,
                 $returnUrl,
@@ -633,20 +707,22 @@ class SubscriptionController extends Controller
             Log::info('Flow member checkout created', [
                 'company_id'     => $company->id,
                 'invite_email'   => $email,
-                'amount'         => $amount,
+                'amount'         => $amountCLP,
                 'commerce_order' => $commerceOrder,
             ]);
 
             return response()->json([
                 'checkout_url' => $redirectUrl,
-                'amount'       => $amount,
+                'amount'       => $amountCLP,
                 'token'        => $paymentResult['token'] ?? null,
+                'gateway'      => 'flow',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Flow member checkout error', [
+            Log::error('Member checkout error', [
                 'company_id' => $company->id,
                 'email'      => $email,
+                'gateway'    => $useDLocal ? 'dlocal' : 'flow',
                 'error'      => $e->getMessage(),
             ]);
 
@@ -697,20 +773,39 @@ class SubscriptionController extends Controller
         }
 
         try {
+            $paymentMethod = $subscription->payment_info['payment_method'] ?? null;
+
+            // Cancel Flow.cl subscription if exists
             if ($subscription->flow_subscription_id) {
                 $this->flow->cancelSubscription($subscription->flow_subscription_id);
+            }
+
+            // For dLocal Smart Fields subscriptions, clear the card_id
+            // to prevent auto-renewal by RenewDlocalSubscriptions command
+            $paymentInfo = $subscription->payment_info ?? [];
+            if ($paymentMethod === 'dlocal' && !empty($paymentInfo['dlocal_card_id'])) {
+                $paymentInfo['dlocal_card_id'] = null;
+                $paymentInfo['recurring'] = false;
+                $paymentInfo['cancelled_by_user'] = true;
+                $paymentInfo['cancelled_at'] = now()->toISOString();
             }
 
             $subscription->update([
                 'status'       => 'cancelled',
                 'cancelled_at' => now(),
+                'payment_info' => $paymentInfo,
+            ]);
+
+            Log::info('Subscription cancelled', [
+                'subscription_id' => $subscription->id,
+                'gateway'         => $paymentMethod ?? 'unknown',
             ]);
 
             return response()->json([
                 'message' => 'Suscripción cancelada. Tendrás acceso hasta el final del período actual.',
             ]);
         } catch (\Exception $e) {
-            Log::error('Flow cancel error', [
+            Log::error('Subscription cancel error', [
                 'subscription_id' => $subscription->id,
                 'error'           => $e->getMessage(),
             ]);
@@ -760,6 +855,12 @@ class SubscriptionController extends Controller
         if (!$token) {
             Log::warning('Flow webhook: no token received');
             return response()->json(['received' => true], 200);
+        }
+
+        // Verify webhook signature if present
+        if ($request->has('s') && !$this->flow->verifyWebhookSignature($request->all())) {
+            Log::warning('Flow webhook: invalid signature', ['token' => $token]);
+            return response()->json(['error' => 'Invalid signature'], 403);
         }
 
         try {
@@ -1570,6 +1671,12 @@ class SubscriptionController extends Controller
         if (!$token) {
             Log::warning('Flow subscription webhook: no token received', ['all' => $request->all()]);
             return response()->json(['received' => true], 200);
+        }
+
+        // Verify webhook signature if present
+        if ($request->has('s') && !$this->flow->verifyWebhookSignature($request->all())) {
+            Log::warning('Flow subscription webhook: invalid signature', ['token' => $token]);
+            return response()->json(['error' => 'Invalid signature'], 403);
         }
 
         try {
