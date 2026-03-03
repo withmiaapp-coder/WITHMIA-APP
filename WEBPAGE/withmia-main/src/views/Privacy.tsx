@@ -90,7 +90,7 @@ const Privacy = () => {
               Política de <span className="text-gradient">Privacidad</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto">
-              Última actualización: 26 de febrero de 2026
+              Última actualización: 27 de febrero de 2026
             </p>
           </div>
         </section>
@@ -239,6 +239,31 @@ const Privacy = () => {
                   <li>Información de facturación (nombre, dirección, RUT)</li>
                   <li>Los datos de pago (número de tarjeta) son procesados exclusivamente por nuestro proveedor de pagos certificado PCI-DSS. WITHMIA no almacena datos de tarjetas de crédito</li>
                 </ul>
+
+                <h3 className="text-[15px] font-semibold text-white/70 mt-6 mb-3">2.6 Datos obtenidos de servicios de Google</h3>
+                <p className="text-white/40 mb-3">
+                  Cuando utilizas Google para interactuar con WITHMIA, podemos recibir los siguientes datos:
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-white/40">
+                  <li><strong className="text-white/50">Google Sign-In:</strong> Nombre completo y dirección de correo electrónico proporcionados por tu cuenta de Google para autenticarte en la plataforma</li>
+                  <li><strong className="text-white/50">Google Calendar:</strong> Eventos del calendario, disponibilidad horaria y datos de reuniones, utilizados exclusivamente para el sistema de agendamiento dentro de WITHMIA</li>
+                  <li><strong className="text-white/50">Tokens OAuth:</strong> Credenciales cifradas que permiten a WITHMIA acceder a los servicios de Google en tu nombre. Estos tokens se almacenan de forma segura y pueden ser revocados en cualquier momento</li>
+                </ul>
+
+                {/* Google API Services compliance */}
+                <div className="mt-6 p-4 rounded-xl border border-violet-500/15 bg-violet-500/[0.04]">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Shield className="w-4 h-4 text-violet-400" />
+                    <span className="text-[13px] font-semibold text-violet-400">Google API Services</span>
+                  </div>
+                  <p className="text-[13px] text-white/40 leading-relaxed pl-6">
+                    El uso y la transferencia de información recibida de las API de Google por parte de WITHMIA se adhiere a la{" "}
+                    <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-violet-400/70 hover:text-violet-400 underline underline-offset-2 decoration-violet-400/20 transition-colors">
+                      Política de Datos de Usuario de los Servicios de API de Google
+                    </a>
+                    , incluyendo los requisitos de Uso Limitado. WITHMIA no utiliza datos de Google para publicidad, no los transfiere a terceros salvo lo necesario para proveer el Servicio, y no los usa para propósitos ajenos a la funcionalidad solicitada por el usuario.
+                  </p>
+                </div>
               </div>
 
               {/* 3 */}
@@ -309,7 +334,7 @@ const Privacy = () => {
                       <tr><td className="py-2.5 pr-4">Stripe</td><td className="py-2.5 pr-4">Procesamiento de pagos</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">Meta (WhatsApp/IG)</td><td className="py-2.5 pr-4">API de mensajería</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">OpenAI</td><td className="py-2.5 pr-4">Procesamiento de IA</td><td className="py-2.5">EE.UU.</td></tr>
-                      <tr><td className="py-2.5 pr-4">Google Cloud</td><td className="py-2.5 pr-4">Calendar API y Google Meet (agendamiento)</td><td className="py-2.5">EE.UU.</td></tr>
+                      <tr><td className="py-2.5 pr-4">Google Cloud</td><td className="py-2.5 pr-4">Autenticación (Sign-In), Calendar API y Google Meet</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">Sentry</td><td className="py-2.5 pr-4">Monitoreo de errores</td><td className="py-2.5">EE.UU.</td></tr>
                       <tr><td className="py-2.5 pr-4">Qdrant</td><td className="py-2.5 pr-4">Base de datos vectorial (IA/RAG)</td><td className="py-2.5">EE.UU.</td></tr>
                     </tbody>
@@ -391,6 +416,11 @@ const Privacy = () => {
                   <li><strong className="text-white/50">Oposición:</strong> Oponerse al tratamiento de sus datos para fines de marketing o análisis</li>
                   <li><strong className="text-white/50">Restricción:</strong> Solicitar la limitación del tratamiento de sus datos en determinadas circunstancias</li>
                   <li><strong className="text-white/50">No ser objeto de decisiones automatizadas:</strong> Derecho a no ser evaluado únicamente mediante tratamiento automatizado que produzca efectos jurídicos significativos</li>
+                  <li><strong className="text-white/50">Revocación de acceso a Google:</strong> Puedes revocar el acceso de WITHMIA a tu cuenta de Google en cualquier momento desde{" "}
+                    <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-amber-400/70 hover:text-amber-400 underline underline-offset-2 decoration-amber-400/20 transition-colors">
+                      myaccount.google.com/permissions
+                    </a>
+                  </li>
                 </ul>
                 <p className="mt-3">
                   Para ejercer estos derechos, envía un correo a{" "}

@@ -21,7 +21,8 @@ import {
   RefreshCw,
   UserCog,
   ShieldCheck,
-  Info
+  Info,
+  CreditCard
 } from 'lucide-react';
 import { useTeams, useAgents, useTeamInvitations, Team, TeamMember, TeamInvitation } from '../hooks/useChatwoot';
 import type { Agent } from '@/types/chatwoot';
@@ -380,16 +381,38 @@ const InviteMemberModal: React.FC<{
     setSaving(true);
     setError(null);
     try {
-      await onInvite({ 
-        email: email.trim(), 
-        name: name.trim() || undefined, 
-        role,
-        team_id: teamId 
+      // Call checkout-member endpoint to create a Flow payment
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const response = await fetch('/api/subscription/checkout-member', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: email.trim(),
+          name: name.trim() || undefined,
+          role,
+          team_id: teamId,
+        }),
       });
-      setSuccess(true);
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Error al procesar el pago');
+      }
+
+      if (result.checkout_url) {
+        // Redirect to Flow.cl payment page
+        window.location.href = result.checkout_url;
+        return;
+      }
+
+      throw new Error('No se obtuvo la URL de pago');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al enviar invitación');
     } finally {
@@ -543,6 +566,17 @@ const InviteMemberModal: React.FC<{
                 <p>El invitado recibirá un <strong>correo con un enlace</strong> para unirse. Deberá iniciar sesión con su cuenta de Google para aceptar la invitación.</p>
               </div>
             </div>
+
+            {/* Pricing notice */}
+            <div className={`flex items-start gap-2.5 p-3 border rounded-xl ${!t ? 'bg-amber-50 border-amber-200' : ''}`}
+              style={t ? { background: isDark ? 'rgba(245,158,11,0.08)' : '#fffbeb', borderColor: isDark ? 'rgba(245,158,11,0.2)' : '#fde68a' } : undefined}
+            >
+              <CreditCard className={`w-4 h-4 mt-0.5 flex-shrink-0 ${!t ? 'text-amber-600' : ''}`} style={t ? { color: '#f59e0b' } : undefined} />
+              <div className={`text-xs leading-relaxed ${!t ? 'text-amber-800' : ''}`} style={t ? { color: t.text } : undefined}>
+                <p className="font-semibold mb-0.5">Costo por miembro adicional</p>
+                <p>Cada miembro adicional tiene un costo de <strong>$9.990 CLP/mes</strong>. Serás redirigido a la pasarela de pago antes de enviar la invitación.</p>
+              </div>
+            </div>
             
             <div className="flex justify-end space-x-3 pt-2">
               <button
@@ -556,15 +590,15 @@ const InviteMemberModal: React.FC<{
               <button
                 type="submit"
                 disabled={saving || !email.trim()}
-                className={`px-5 py-2.5 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium shadow-lg ${!t ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/25' : ''}`}
+                className={`px-5 py-2.5 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium shadow-lg ${!t ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-amber-500/25' : ''}`}
                 style={t ? { background: t.accent } : undefined}
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <CreditCard className="w-4 h-4" />
                 )}
-                <span>Enviar Invitación</span>
+                <span>Pagar e Invitar</span>
               </button>
             </div>
           </form>

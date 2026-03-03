@@ -14,6 +14,7 @@ import {
   BarChart3,
   Bot,
 } from "lucide-react";
+import { PersonalizationShowcase } from "@/components/PersonalizationShowcase";
 import { useEffect, useRef, useState, useCallback } from "react";
 
 /* ═══════════════════════════════════════════
@@ -323,12 +324,12 @@ export const PlatformHero = () => {
               <a href="https://app.withmia.com" onClick={() => trackCTAClick("probar_gratis_hero", "platform_hero")} className="group relative inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold text-sm overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_40px_rgba(245,158,11,0.45)]">
                   {/* Shimmer sweep */}
                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  <span className="relative">Probar gratis 14 días</span>
+                  <span className="relative">Comenzar gratis</span>
                   <ArrowRight className="w-4 h-4 relative group-hover:translate-x-0.5 transition-transform" />
               </a>
               <Link to="/contacto" className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-transparent text-white/80 font-semibold text-sm border border-white/15 hover:border-white/30 hover:bg-white/[0.04] hover:-translate-y-0.5 transition-all duration-300">
                   <CalendarCheck className="w-4 h-4 text-white/50" />
-                  Solicitar demo
+                  Contactar ventas
               </Link>
             </div>
 
@@ -370,86 +371,20 @@ export const PlatformHero = () => {
             </div>
           </div>
 
-          {/* ── Hero screenshot — 3D perspective ── */}
-          <div
-            className={`relative transition-all duration-1000 delay-500 ${
-              heroVis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16"
-            }`}
-            style={{ perspective: "1200px" }}
-          >
-            {/* Glow behind the screenshot */}
-            <div
-              className="absolute inset-x-10 -top-10 bottom-0 rounded-3xl blur-[80px] opacity-[0.08] pointer-events-none"
-              style={{ background: "linear-gradient(135deg, #a78bfa, #fbbf24, #22d3ee)" }}
-            />
-
-            <div
-              className="relative transition-transform duration-700"
-              style={{
-                transform: heroVis ? "rotateX(2deg)" : "rotateX(8deg)",
-                transformOrigin: "center bottom",
-              }}
-            >
-              <BrowserFrame url="app.withmia.com" accent="#a78bfa" perspective>
-                <div className="relative overflow-hidden max-h-[520px]">
-                  <img
-                    src="/dashboard-preview.webp"
-                    alt="WITHMIA — Plataforma de atención al cliente"
-                    className="w-full h-auto block object-cover object-top"
-                    loading="eager"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[hsl(230,40%,6%)] to-transparent pointer-events-none" />
-                </div>
-              </BrowserFrame>
-            </div>
-          </div>
-
-          {/* ── Animated metrics ── */}
-          <div
-            ref={metricsRef}
-            className={`grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mt-16 transition-all duration-700 delay-300 ${
-              metricsVis ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-          >
-            {metrics.map((m, i) => {
-              const MIcon = m.icon;
-              const count = useCountUp(m.value, 2200, metricsVis, m.decimals ?? 0);
-              return (
-                <div
-                  key={i}
-                  className="group relative flex items-center gap-4 py-5 px-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] transition-all duration-300"
-                  style={{ transitionDelay: `${i * 80}ms` }}
-                >
-                  {/* Gradient accent on hover */}
-                  <div
-                    className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                    style={{ background: `radial-gradient(circle at 30% 50%, ${m.color}08, transparent 70%)` }}
-                  />
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 relative"
-                    style={{ backgroundColor: `${m.color}10`, border: `1px solid ${m.color}18` }}
-                  >
-                    <MIcon className="w-[18px] h-[18px]" style={{ color: m.color }} />
-                  </div>
-                  <div>
-                    <p className="text-xl md:text-2xl font-extrabold text-white leading-none mb-0.5 font-mono tabular-nums">
-                      {m.prefix ?? ""}{count}{m.suffix}
-                    </p>
-                    <p className="text-[11px] text-white/35 font-medium">{m.label}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════
+          PERSONALIZATION SHOWCASE
+          ══════════════════════════════════════ */}
+      <PersonalizationShowcase />
+
+      {/* ══════════════════════════════════════
           SECTION 2 — PLATFORM TOUR (TIMELINE)
           ══════════════════════════════════════ */}
-      <section className="pt-10 md:pt-14 pb-10 md:pb-14 px-4 relative overflow-hidden">
+      <section className="pt-6 md:pt-10 pb-10 md:pb-14 px-4 relative overflow-hidden">
         <div className="max-w-6xl mx-auto">
-          <Reveal className="text-center mb-20 md:mb-24">
+          <Reveal className="text-center mb-12 md:mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-cyan-500/10 to-violet-500/10 border border-cyan-500/20 text-[11px] text-cyan-300 font-semibold backdrop-blur-sm mb-6 tracking-wide">
               <BarChart3 className="w-3.5 h-3.5" />
               Recorrido por la plataforma
@@ -474,7 +409,7 @@ export const PlatformHero = () => {
               <div className="absolute left-1/2 -translate-x-1/2 w-2 h-24 rounded-full blur-sm timeline-particle" style={{ background: "linear-gradient(to bottom, transparent, #a78bfa, transparent)" }} />
             </div>
 
-            <div className="space-y-16 md:space-y-24">
+            <div className="space-y-12 md:space-y-16">
               {platformScreens.map((screen, i) => {
                 const SIcon = screen.icon;
                 return (

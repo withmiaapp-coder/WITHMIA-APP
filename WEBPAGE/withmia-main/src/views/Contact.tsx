@@ -45,7 +45,7 @@ const formSchema = z.object({
 });
 
 const interests = [
-  "Quiero una demo",
+  "Quiero comenzar con WITHMIA",
   "Tengo preguntas sobre precios",
   "Quiero integrar WITHMIA a mi negocio",
   "Quiero ser partner",
@@ -101,7 +101,7 @@ const Contact = () => {
   const modalRef = useRef<HTMLDivElement>(null);
 
   const bookingReasons = [
-    'Quiero una demo de WITHMIA',
+    'Quiero comenzar con WITHMIA',
     'Consultar sobre precios y planes',
     'Integrar WITHMIA a mi negocio',
     'Automatizar WhatsApp / canales',

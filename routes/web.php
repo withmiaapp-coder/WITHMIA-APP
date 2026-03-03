@@ -66,7 +66,7 @@ Broadcast::routes(['middleware' => ['web', 'railway.auth']]);
 // ============================================================================
 // 3. AUTENTICACIÓN (Google OAuth, sesión, logout)
 // ============================================================================
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
     if (Auth::check()) {
         $user = Auth::user();
         if ($user->company_slug) {
@@ -74,15 +74,36 @@ Route::get('/', function () {
         }
         return view('transition', ['redirect' => '/onboarding']);
     }
-    return view('login');
+    // Preserve ?plan= param from pricing page for post-signup checkout
+    $plan = $request->query('plan');
+    if ($plan) {
+        session(['pending_plan' => $plan]);
+    }
+    return view('login', ['plan' => $plan]);
 });
 
-Route::get('/login', function () {
+Route::get('/login', function (Request $request) {
     if (Auth::check()) {
         return view('transition', ['redirect' => '/onboarding']);
     }
-    return view('login');
+    $plan = $request->query('plan');
+    if ($plan) {
+        session(['pending_plan' => $plan]);
+    }
+    return view('login', ['plan' => $plan]);
 })->name('login');
+
+// Alias for /register → same as login (Google OAuth creates account automatically)
+Route::get('/register', function (Request $request) {
+    if (Auth::check()) {
+        return view('transition', ['redirect' => '/onboarding']);
+    }
+    $plan = $request->query('plan');
+    if ($plan) {
+        session(['pending_plan' => $plan]);
+    }
+    return view('login', ['plan' => $plan]);
+})->name('register');
 
 Route::post('/auth/google', [GoogleAuthController::class, 'authenticate'])
     ->middleware('throttle:10,1')

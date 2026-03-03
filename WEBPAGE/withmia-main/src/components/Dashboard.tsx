@@ -201,7 +201,7 @@ export const Dashboard = () => {
             {/* Screenshot with floating overlays */}
             <div className="relative overflow-hidden max-h-[520px]">
               <img
-                src="/dashboard-preview.webp"
+                src="/dashboard.png"
                 alt="WITHMIA Dashboard"
                 className="w-full h-auto block object-cover object-top"
                 loading="lazy"
@@ -279,7 +279,7 @@ export const Dashboard = () => {
           </a>
           <Link to="/contacto" className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
               <CalendarCheck className="w-4 h-4" />
-              Agenda una demo
+              Contactar ventas
           </Link>
         </div>
       </div>

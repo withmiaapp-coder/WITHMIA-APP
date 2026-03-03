@@ -127,6 +127,7 @@ const sidebarNav: NavItem[] = [
   {
     id: "_s_changelog", label: "Changelog", icon: Sparkles,
     children: [
+      { id: "changelog-v102", label: "v1.0.2 — Feb 2026" },
       { id: "changelog-v101", label: "v1.0.1 — Feb 2026" },
       { id: "changelog-v100", label: "v1.0.0 — Ene 2026" },
     ],
@@ -396,6 +397,24 @@ const pages: Record<string, PageMeta> = {
     breadcrumb: ["Docs", "Seguridad", "Auditoría"],
     toc: [{ id: "audit-log", label: "Log de auditoría" }, { id: "retention", label: "Retención" }],
     readTime: "3 min", lastUpdated: "16 Feb 2026",
+  },
+  "changelog-v102": {
+    title: "v1.0.2 — Planes, pagos y control total",
+    description: "Integración de pagos con Flow.cl, rediseño completo de suscripciones, sistema de permisos por plan y flujo de invitación con cobro.",
+    breadcrumb: ["Docs", "Changelog", "v1.0.2"],
+    toc: [
+      { id: "flow-payments", label: "Pagos con Flow.cl" },
+      { id: "subscription-redesign", label: "Rediseño de suscripciones" },
+      { id: "feature-gating", label: "Sistema de permisos por plan" },
+      { id: "team-invite-payment", label: "Invitación con cobro" },
+      { id: "sidebar-reorder", label: "Reorden del sidebar" },
+      { id: "support-tickets", label: "Sistema de tickets" },
+      { id: "quotes-cleanup", label: "Citas diarias mejoradas" },
+      { id: "contrast-improvements", label: "Mejoras de contraste" },
+      { id: "deep-link-nav", label: "Navegación por enlace directo" },
+      { id: "security-102", label: "Seguridad y estabilidad" },
+    ],
+    readTime: "7 min", lastUpdated: "1 Mar 2026",
   },
   "changelog-v101": {
     title: "v1.0.1 — Novedades de Febrero 2026",
@@ -857,13 +876,13 @@ const richContent: Record<string, ContentBlock[]> = {
     { type: "heading", id: "planes", text: "Planes disponibles" },
     { type: "p", text: "WITHMIA ofrece planes adaptados a cada etapa de crecimiento de tu negocio. Todos los planes incluyen inbox omnicanal, asistente IA básico y soporte por chat." },
     { type: "list", items: [
-      "Starter (gratis) — hasta 100 conversaciones/mes, 2 agentes, 1 canal, IA básica",
-      "Growth ($49/mes) — conversaciones ilimitadas, agentes ilimitados, todos los canales, IA avanzada con RAG, analytics",
-      "Enterprise (personalizado) — todo en Growth + SSO/SAML, SLA dedicado, IP whitelisting, soporte prioritario 24/7, custom integrations",
+      "Gratuito ($0/mes) — hasta 500 mensajes IA/mes, 1 canal WhatsApp (QR), 1 usuario, asistente básico",
+      "Pro ($18/mes o $15/mes anual) — mensajes ilimitados, todos los canales, 1 miembro incluido (+$10/mes por miembro adicional), IA avanzada con RAG, analytics",
+      "Enterprise (personalizado) — todo en Pro + SSO/SAML, SLA dedicado, IP whitelisting, soporte prioritario 24/7, custom integrations",
     ]},
-    { type: "callout", variant: "info", title: "Sin tarjeta de crédito", text: "El plan Starter es gratuito y no requiere tarjeta de crédito. Puedes probar WITHMIA sin compromiso y actualizar cuando lo necesites." },
+    { type: "callout", variant: "info", title: "Sin tarjeta de crédito", text: "El plan Gratuito no requiere tarjeta de crédito. Puedes probar WITHMIA sin compromiso y actualizar a Pro cuando lo necesites." },
     { type: "heading", id: "facturacion", text: "Facturación" },
-    { type: "p", text: "Los planes de pago se facturan mensual o anualmente. El pago anual incluye un 20% de descuento." },
+    { type: "p", text: "Los planes de pago se facturan mensual o anualmente. El pago anual incluye un 17% de descuento." },
     { type: "list", items: [
       "Métodos de pago: tarjeta de crédito/débito, transferencia bancaria (Enterprise)",
       "Moneda: USD. Precios no incluyen impuestos locales",
@@ -875,9 +894,9 @@ const richContent: Record<string, ContentBlock[]> = {
     { type: "steps", steps: [
       { title: "Upgrade", desc: "Al subir de plan, las nuevas funcionalidades se activan al instante. Se cobra el proporcional restante del período." },
       { title: "Downgrade", desc: "Al bajar de plan, las funcionalidades premium se mantienen hasta el final del período actual." },
-      { title: "Cancelar", desc: "Al cancelar, tu cuenta pasa a plan Starter al final del período de facturación." },
+      { title: "Cancelar", desc: "Al cancelar, tu cuenta pasa al plan Gratuito al final del período de facturación." },
     ]},
-    { type: "callout", variant: "tip", title: "Enterprise", text: "Para el plan Enterprise, contacta a nuestro equipo de ventas en ventas@withmia.com o agenda una demo desde la página de precios." },
+    { type: "callout", variant: "tip", title: "Enterprise", text: "Para el plan Enterprise, contacta a nuestro equipo de ventas en ventas@withmia.com o escríbenos desde la página de contacto." },
   ],
 
   /* ── Dashboard ── */
@@ -1409,9 +1428,107 @@ const richContent: Record<string, ContentBlock[]> = {
     { type: "callout", variant: "info", title: "Exportar logs", text: "Exporta logs en formato JSON o CSV desde Configuración → Seguridad → Auditoría, o via API para integrar con tu SIEM (Splunk, Datadog, etc.)." },
   ],
 
+  /* ── Changelog v1.0.2 ── */
+  "changelog-v102": [
+    { type: "callout", variant: "tip", title: "Versión actual", text: "v1.0.2 es la versión más reciente de WITHMIA. Desplegada el 28 de febrero de 2026." },
+
+    { type: "heading", id: "flow-payments", text: "Integración de pagos con Flow.cl" },
+    { type: "p", text: "WITHMIA ahora acepta pagos reales a través de Flow.cl, el principal procesador de pagos de Chile. La integración cubre el ciclo completo: creación de orden, redirección a Flow, confirmación via webhook y activación automática del plan." },
+    { type: "list", items: [
+      "Checkout completo con Flow.cl — WebPay, tarjetas de crédito/débito y transferencia bancaria",
+      "Webhook de confirmación — activación automática de suscripción al recibir pago exitoso",
+      "Manejo de estados — pendiente, completado, rechazado y cancelado",
+      "Página de retorno post-pago con feedback visual del estado",
+      "Modo sandbox para desarrollo y pruebas sin cargos reales",
+    ]},
+
+    { type: "heading", id: "subscription-redesign", text: "Rediseño completo de suscripciones (v3.2)" },
+    { type: "p", text: "La página de suscripción fue rediseñada desde cero con un estilo profesional inspirado en ChatGPT y Stripe. Nueva experiencia visual con cards de planes, comparativa de features y gestión de equipo integrada." },
+    { type: "list", items: [
+      "Diseño ChatGPT/Stripe — cards de planes con gradientes, iconos y badges",
+      "Toggle mensual/anual con descuento visible",
+      "Tabla comparativa completa de features entre planes",
+      "Gestión de miembros del equipo directamente desde la página de billing",
+      "Indicadores visuales de plan actual, límites de uso y fecha de renovación",
+      "Flujo de upgrade/downgrade con confirmación y redirección a Flow",
+    ]},
+
+    { type: "heading", id: "feature-gating", text: "Sistema de permisos por plan" },
+    { type: "p", text: "Cada herramienta del sidebar ahora respeta los límites del plan contratado. Las secciones Pro bloqueadas muestran un overlay con candado y botón de upgrade, en lugar de ocultarse." },
+    { type: "list", items: [
+      "Gating granular por sección — cada módulo valida el plan del workspace",
+      "Overlay visual con candado — las herramientas bloqueadas son visibles pero no accesibles",
+      "Botón de upgrade contextual — redirige a /billing con el plan recomendado",
+      "Items Free: Inicio, Conversaciones, Integración, Conocimientos",
+      "Items Pro: Entrenamiento IA, Calendario, Equipo, Productos",
+    ]},
+
+    { type: "heading", id: "team-invite-payment", text: "Invitación de equipo con cobro" },
+    { type: "p", text: "Al invitar un nuevo miembro al workspace, se activa un flujo de pago automático si el plan requiere cobro adicional por asiento. El administrador paga antes de que la invitación se envíe." },
+    { type: "list", items: [
+      "Cálculo automático del costo por asiento adicional",
+      "Flujo de pago integrado antes del envío de invitación",
+      "Confirmación via webhook y activación automática del miembro",
+      "Soporte para múltiples invitaciones en batch",
+    ]},
+
+    { type: "heading", id: "sidebar-reorder", text: "Reorden del sidebar" },
+    { type: "p", text: "El sidebar fue reorganizado para agrupar las herramientas de forma más lógica y priorizando las secciones más utilizadas:" },
+    { type: "list", items: [
+      "Nuevo orden: Inicio → Conversaciones → Entrenamiento → Integración → Conocimientos → Calendario → Equipo → Productos → Admin",
+      "Agrupación visual mejorada entre items Free y Pro",
+    ]},
+
+    { type: "heading", id: "support-tickets", text: "Sistema de tickets de soporte" },
+    { type: "p", text: "Nuevo sistema de tickets integrado que permite a los usuarios reportar problemas, solicitar features y recibir soporte directamente desde la aplicación." },
+    { type: "list", items: [
+      "Creación de tickets con categoría, prioridad y descripción",
+      "Estados: abierto, en progreso, resuelto, cerrado",
+      "Historial de tickets por usuario con filtros",
+      "Componentes tematizados con el sistema de paletas",
+    ]},
+
+    { type: "heading", id: "quotes-cleanup", text: "Citas diarias mejoradas" },
+    { type: "p", text: "El sistema de citas diarias que muestra frases célebres de personajes históricos nacidos o fallecidos en la fecha actual recibió mejoras importantes en la calidad de las biografías." },
+    { type: "list", items: [
+      "Limpieza de artefactos de Wikipedia \u2014 eliminación automática de referencias como [1], [], [note 1], [cita requerida] del texto de biografías",
+      "Normalización de espacios \u2014 espacios dobles y espacios antes de puntuación se corrigen automáticamente",
+      "Las biografías ahora se renderizan completamente limpias en el header del dashboard",
+    ]},
+
+    { type: "heading", id: "contrast-improvements", text: "Mejoras de contraste visual" },
+    { type: "p", text: "Aplicando teoría del color y cumplimiento WCAG AA, se mejoraron los contrastes del tema por defecto (sin paleta personalizada) en el dashboard de métricas." },
+    { type: "list", items: [
+      "Track del gauge circular \u2014 de gray-100 (#f3f4f6) a gray-200 (#e5e7eb) para mayor visibilidad sobre fondo blanco",
+      "Valor porcentual \u2014 ahora usa text-gray-800 explícito en lugar de heredar color negro puro",
+      "Label \u2018Resolución\u2019 \u2014 text-gray-500 para mejor legibilidad (ratio de contraste \u22654.5:1)",
+      "Texto descriptivo \u2014 de text-gray-400 a text-gray-500 (cumple WCAG AA mínimo)",
+      "Borde de card \u2014 de border-gray-200/80 a border-gray-200 opaco para definición clara",
+      "Sombra hover \u2014 intensificada de gray-300/30 a gray-300/40 para feedback táctil",
+    ]},
+
+    { type: "heading", id: "deep-link-nav", text: "Navegación por enlace directo" },
+    { type: "p", text: "Ahora es posible enlazar directamente a cualquier sección del dashboard usando query params en la URL (por ejemplo, ?section=support). Esto permite que enlaces externos \u2014 como el botón \u2018Contactar Soporte\u2019 del footer de la web \u2014 lleven al usuario a la sección correcta sin pasos intermedios." },
+    { type: "list", items: [
+      "Deep linking con ?section= \u2014 redirige automáticamente a la sección indicada (support, subscription, chats, etc.)",
+      "Preservación de query params \u2014 el controlador Laravel mantiene los parámetros al redirigir de /dashboard a /dashboard/{slug}",
+      "Limpieza automática de URL \u2014 al navegar a otra sección del sidebar, los query params se eliminan con history.replaceState() para evitar URLs obsoletas",
+      "Footer de la web \u2014 \u2018Contactar Soporte\u2019 ahora lleva directamente a la sección de tickets dentro de la app",
+    ]},
+
+    { type: "heading", id: "security-102", text: "Seguridad y estabilidad" },
+    { type: "list", items: [
+      "Webhook signature verification para pagos Flow.cl",
+      "Rate limiting en endpoints de pago",
+      "Validación server-side de permisos por plan en cada request",
+      "Logs de auditoría para transacciones de pago",
+      "Mejoras de rendimiento en carga del dashboard",
+    ]},
+  ],
+
   /* ── Changelog v1.0.1 ── */
   "changelog-v101": [
-    { type: "callout", variant: "tip", title: "Versión actual", text: "v1.0.1 es la versión más reciente de WITHMIA. Desplegada el 26 de febrero de 2026." },
+    { type: "callout", variant: "info", title: "Versión anterior", text: "v1.0.1 fue desplegada el 26 de febrero de 2026." },
 
     { type: "heading", id: "theme-system", text: "Sistema de temas y paletas de colores" },
     { type: "p", text: "Nuevo sistema completo de personalización visual que permite a cada usuario elegir entre 16 paletas de colores prediseñadas o crear un color personalizado. El tema seleccionado se aplica de forma consistente en toda la interfaz: sidebar, barra superior, cards, badges, inputs, botones, modales y más." },
@@ -1636,7 +1753,7 @@ const richContent: Record<string, ContentBlock[]> = {
       "Portal de facturación — historial de pagos e invoices",
       "Webhooks de pago — activación/desactivación automática del plan",
       "Códigos de referido — descuentos por invitación",
-      "Trial gratuito — acceso completo durante el periodo de prueba",
+      "Plan Gratuito — WhatsApp QR y hasta 500 mensajes IA/mes sin costo",
     ]},
 
     { type: "heading", id: "admin-panel", text: "Panel de administración (Superadmin)" },

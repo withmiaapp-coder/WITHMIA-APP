@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+// SubscriptionPage – v3.2 — WITHMIA 1.0.2
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CreditCard,
   Check,
@@ -7,7 +8,6 @@ import {
   Crown,
   Shield,
   Clock,
-  AlertTriangle,
   ExternalLink,
   RefreshCw,
   ChevronRight,
@@ -21,10 +21,14 @@ import {
   FileText,
   Loader,
   X,
-  Copy,
   Gift,
   Lock,
-  HelpCircle,
+  UserPlus,
+  Mail,
+  Trash2,
+  ArrowUpRight,
+  Calendar,
+  Star,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -34,15 +38,15 @@ import { useTheme } from '@/contexts/ThemeContext';
 interface Subscription {
   id: number;
   plan_name: string;
-  price: number;
+  price?: number;
   billing_cycle: 'monthly' | 'annual';
-  max_agents: number;
+  max_agents?: number;
   status: 'active' | 'cancelled' | 'expired' | 'suspended' | 'trialing';
   starts_at: string;
   ends_at: string | null;
-  trial_ends_at: string | null;
-  features: Record<string, unknown> | null;
-  payment_info: {
+  trial_ends_at?: string | null;
+  features?: Record<string, unknown> | null;
+  payment_info?: {
     payment_method?: string;
     last_four?: string;
     card_brand?: string;
@@ -53,51 +57,84 @@ interface BillingInfo {
   subscription: Subscription | null;
   team_count: number;
   base_price: number;
-  per_member_price: number;
+  per_member_price?: number;
+  per_member?: number;
   total_price: number;
-  trial_days_remaining: number | null;
-  is_trial: boolean;
+  trial_days_remaining?: number | null;
+  is_trial?: boolean;
+  is_active?: boolean;
+  plan?: string;
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+  role?: string;
+  avatar_url?: string;
+}
+
+interface TeamInvitation {
+  id: number;
+  email: string;
+  name?: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+  expires_at?: string;
 }
 
 /* ═══════════════════════════════════════════
    PLAN DATA
    ═══════════════════════════════════════════ */
-const PLAN_FEATURES = [
-  { icon: Bot, text: 'Asistente IA ilimitado 24/7' },
-  { icon: MessageCircle, text: 'Conversaciones ilimitadas' },
-  { icon: Users, text: '1 miembro incluido' },
-  { icon: Globe, text: 'WhatsApp, Instagram, Facebook, Web' },
-  { icon: Sparkles, text: 'Modelos IA avanzados (GPT-4o, Claude)' },
-  { icon: FileText, text: 'Base de conocimiento (RAG)' },
-  { icon: BarChart3, text: 'Analíticas y métricas completas' },
+const FREE_VS_PRO = [
+  { feature: 'Canales', free: 'Solo WhatsApp', pro: 'WhatsApp, Instagram, Facebook, Email, Web' },
+  { feature: 'Mensajes IA/mes', free: '500', pro: 'Ilimitados' },
+  { feature: 'Herramientas', free: '1 conectada', pro: 'Todas ilimitadas' },
+  { feature: 'Modelos IA', free: 'Básico', pro: 'GPT-4o, Claude, Gemini' },
+  { feature: 'Base de conocimiento', free: '—', pro: 'Documentos, web, datos' },
+  { feature: 'Analíticas', free: '—', pro: 'Dashboard completo' },
+  { feature: 'Miembros de equipo', free: '1', pro: '1 incluido + adicionales' },
+  { feature: 'Soporte', free: 'Comunidad', pro: 'Prioritario' },
+];
+
+const PRO_HIGHLIGHTS = [
+  { icon: Bot, text: 'IA ilimitada 24/7' },
+  { icon: Globe, text: 'Omnicanal completo' },
+  { icon: Sparkles, text: 'Modelos avanzados' },
+  { icon: FileText, text: 'Base de conocimiento' },
+  { icon: BarChart3, text: 'Analíticas' },
+  { icon: Users, text: 'Multi-agente' },
   { icon: Headphones, text: 'Soporte prioritario' },
   { icon: Shield, text: 'Seguridad empresarial' },
 ];
 
-const FREE_PLAN_LIMITS = [
-  { icon: Globe, text: 'Solo WhatsApp como canal', included: true },
-  { icon: Zap, text: '1 herramienta conectada', included: true },
-  { icon: MessageCircle, text: 'Límite de 500 mensajes/mes', included: true },
-  { icon: Bot, text: 'Asistente IA básico', included: true },
-  { icon: Users, text: 'Múltiples miembros de equipo', included: false },
-  { icon: Sparkles, text: 'Modelos IA avanzados', included: false },
-  { icon: BarChart3, text: 'Analíticas y métricas', included: false },
-  { icon: FileText, text: 'Base de conocimiento (RAG)', included: false },
-  { icon: Headphones, text: 'Soporte prioritario', included: false },
-];
-
 const FAQ_ITEMS = [
   { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, puedes cancelar tu suscripción cuando quieras. Mantendrás el acceso hasta el final del período de facturación.' },
-  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) a través de nuestra plataforma de pagos segura.' },
-  { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional por cada miembro extra. El cobro se prorratea según los días restantes del ciclo.' },
+  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) y otros medios de pago locales a través de Flow.cl, plataforma de pagos regulada en Chile.' },
+  { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional de $9.990/mes (o $95.990/año) por cada miembro extra. El cobro se gestiona automáticamente al invitar desde la sección de equipo.' },
   { q: '¿Hay algún contrato o permanencia mínima?', a: 'No, no hay contratos ni permanencia mínima. Pagas mes a mes o año a año, sin compromiso.' },
+  { q: '¿Los precios incluyen IVA?', a: 'Sí. Todos los precios publicados incluyen IVA (19%).' },
 ];
+
+function formatCLP(n: number): string {
+  return n.toLocaleString('es-CL');
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    return new Date(dateStr).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
 
 /* ═══════════════════════════════════════════
    SUBSCRIPTION PAGE
    ═══════════════════════════════════════════ */
 export default function SubscriptionPage() {
   const { hasTheme, isDark } = useTheme();
+
   const t = useMemo(() => {
     if (!hasTheme) return null;
     return {
@@ -110,12 +147,12 @@ export default function SubscriptionPage() {
       cardBorder: isDark ? 'var(--theme-content-card-border)' : 'rgba(0,0,0,0.08)',
       contentBg: 'var(--theme-content-bg)',
       inputBg: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
-      inputBorder: isDark ? 'rgba(255,255,255,0.12)' : '#d1d5db',
+      inputBorder: isDark ? 'rgba(255,255,255,0.12)' : '#e5e7eb',
       subtleBg: isDark ? 'rgba(255,255,255,0.04)' : '#f9fafb',
-      badgeBg: isDark ? 'rgba(255,255,255,0.08)' : 'var(--theme-accent-light)',
     };
   }, [hasTheme, isDark]);
 
+  // ── State ──
   const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
@@ -125,129 +162,160 @@ export default function SubscriptionPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [showReferral, setShowReferral] = useState(false);
+  const isAutoTriggered = useRef(false);
 
-  // Pricing
-  const BASE_PRICE_MONTHLY = 18;
-  const BASE_PRICE_ANNUAL = 15; // Discount for annual
-  const PER_MEMBER_MONTHLY = 10;
-  const PER_MEMBER_ANNUAL = 8;
+  // Team state
+  const [agents, setAgents] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState<'agent' | 'administrator'>('agent');
+  const [inviting, setInviting] = useState(false);
 
-  const basePrice = billingCycle === 'monthly' ? BASE_PRICE_MONTHLY : BASE_PRICE_ANNUAL;
-  const perMemberPrice = billingCycle === 'monthly' ? PER_MEMBER_MONTHLY : PER_MEMBER_ANNUAL;
+  // Pricing (CLP – IVA incluido)
+  const BASE_MONTHLY = 19990;
+  const BASE_ANNUAL = 189990;
+  const MEMBER_MONTHLY = 9990;
+  const MEMBER_ANNUAL = 95990;
 
+  const basePrice = billingCycle === 'monthly' ? BASE_MONTHLY : BASE_ANNUAL;
+  const perMemberPrice = billingCycle === 'monthly' ? MEMBER_MONTHLY : MEMBER_ANNUAL;
+
+  const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  // ── Fetch billing ──
   const fetchBilling = useCallback(async () => {
     try {
-      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       const res = await fetch('/api/subscription', {
         credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
-        },
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
       });
       if (res.ok) {
         const data = await res.json();
         setBilling(data);
-        if (data.subscription?.billing_cycle) {
-          setBillingCycle(data.subscription.billing_cycle);
-        }
+        if (data.subscription?.billing_cycle) setBillingCycle(data.subscription.billing_cycle);
       }
-    } catch (err) {
-      console.error('Error fetching billing:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error('Error fetching billing:', err); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchBilling();
-  }, [fetchBilling]);
+  // ── Fetch team ──
+  const fetchTeam = useCallback(async () => {
+    setLoadingTeam(true);
+    try {
+      const h = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf() };
+      const [aRes, iRes] = await Promise.all([
+        fetch('/api/chatwoot-proxy/agents', { credentials: 'include', headers: h }),
+        fetch('/api/chatwoot-proxy/invitations', { credentials: 'include', headers: h }),
+      ]);
+      if (aRes.ok) { const d = await aRes.json(); setAgents(Array.isArray(d) ? d : (d?.data || [])); }
+      if (iRes.ok) { const d = await iRes.json(); setInvitations(Array.isArray(d?.data) ? d.data : []); }
+    } catch (err) { console.error('Error fetching team:', err); }
+    finally { setLoadingTeam(false); }
+  }, []);
 
-  const showNotification = (type: 'success' | 'error', message: string) => {
+  useEffect(() => { fetchBilling(); fetchTeam(); }, [fetchBilling, fetchTeam]);
+
+  // Auto-subscribe from ?plan= param
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('plan');
+    if (p && (p === 'pro-monthly' || p === 'pro-annual') && !isAutoTriggered.current) {
+      isAutoTriggered.current = true;
+      const cycle = p === 'pro-annual' ? 'annual' : 'monthly';
+      setBillingCycle(cycle);
+      setTimeout(() => handleSubscribeWithCycle(cycle), 800);
+      const url = new URL(window.location.href); url.searchParams.delete('plan');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [billing]);
+
+  const showNotif = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = () => handleSubscribeWithCycle(billingCycle);
+
+  const handleSubscribeWithCycle = async (cycle: 'monthly' | 'annual') => {
     setSubscribing(true);
     try {
-      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       const res = await fetch('/api/subscription/checkout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
-        },
-        body: JSON.stringify({ billing_cycle: billingCycle }),
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+        body: JSON.stringify({ billing_cycle: cycle }),
       });
-
       const data = await res.json();
+      if (data.checkout_url) window.location.href = data.checkout_url;
+      else if (data.message) showNotif('error', data.message);
+    } catch { showNotif('error', 'Error al procesar. Intenta de nuevo.'); }
+    finally { setSubscribing(false); }
+  };
 
-      if (data.checkout_url) {
-        // Redirect to dLocal GO checkout
-        window.open(data.checkout_url, '_blank');
-      } else if (data.message) {
-        showNotification('error', data.message);
-      }
-    } catch (err) {
-      showNotification('error', 'Error al procesar. Intenta de nuevo.');
-    } finally {
-      setSubscribing(false);
-    }
+  const handlePortal = async () => {
+    try {
+      const res = await fetch('/api/subscription/portal', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+      });
+      const data = await res.json();
+      if (data.portal_url) window.open(data.portal_url, '_blank');
+    } catch { showNotif('error', 'Error al abrir el portal de pagos'); }
   };
 
   const handleApplyReferral = async () => {
     if (!referralCode.trim()) return;
     setApplyingReferral(true);
     try {
-      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
       const res = await fetch('/api/subscription/referral', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
-        },
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
         body: JSON.stringify({ code: referralCode }),
       });
-
       const data = await res.json();
-      if (res.ok) {
-        showNotification('success', data.message || 'Código aplicado correctamente');
-        setReferralCode('');
-        fetchBilling();
-      } else {
-        showNotification('error', data.message || 'Código inválido');
-      }
-    } catch {
-      showNotification('error', 'Error al aplicar código');
-    } finally {
-      setApplyingReferral(false);
-    }
+      if (res.ok) { showNotif('success', data.message || 'Código aplicado'); setReferralCode(''); fetchBilling(); }
+      else showNotif('error', data.message || 'Código inválido');
+    } catch { showNotif('error', 'Error al aplicar código'); }
+    finally { setApplyingReferral(false); }
   };
 
-  const handleManageSubscription = async () => {
+  const handleInviteMember = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
     try {
-      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-      const res = await fetch('/api/subscription/portal', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'X-CSRF-TOKEN': csrfMeta?.getAttribute('content') || '',
-        },
+      const res = await fetch('/api/subscription/checkout-member', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf() },
+        body: JSON.stringify({ email: inviteEmail.trim(), name: inviteName.trim() || undefined, role: inviteRole }),
       });
       const data = await res.json();
-      if (data.portal_url) {
-        window.open(data.portal_url, '_blank');
-      }
-    } catch {
-      showNotification('error', 'Error al abrir el portal de pagos');
-    }
+      if (!res.ok) throw new Error(data.message || 'Error al procesar');
+      if (data.checkout_url) { window.location.href = data.checkout_url; return; }
+      throw new Error('No se obtuvo URL de pago');
+    } catch (err: unknown) {
+      showNotif('error', err instanceof Error ? err.message : 'Error al invitar');
+    } finally { setInviting(false); }
   };
+
+  const handleCancelInvitation = async (id: number) => {
+    try {
+      await fetch(`/api/chatwoot-proxy/invitations/${id}`, {
+        method: 'DELETE', credentials: 'include',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrf() },
+      });
+      fetchTeam();
+    } catch { showNotif('error', 'Error al cancelar invitación'); }
+  };
+
+  // ── Derived ──
+  const sub = billing?.subscription;
+  const isActive = sub?.status === 'active' || billing?.is_active;
+  const isTrial = billing?.is_trial || sub?.status === 'trialing';
+  const teamCount = billing?.team_count || 1;
+  const extraMembers = Math.max(0, teamCount - 1);
+  const totalCost = basePrice + (extraMembers * perMemberPrice);
+  const pending = invitations.filter(i => i.status === 'pending');
 
   if (loading) {
     return (
@@ -257,278 +325,482 @@ export default function SubscriptionPage() {
     );
   }
 
-  const sub = billing?.subscription;
-  const isActive = sub?.status === 'active';
-  const isTrial = billing?.is_trial || sub?.status === 'trialing';
-  const teamCount = billing?.team_count || 1;
-  const additionalMembers = Math.max(0, teamCount - 1);
-  const computedTotal = basePrice + (additionalMembers * perMemberPrice);
-
+  /* ═══════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════ */
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-      <div className="max-w-5xl mx-auto space-y-10">
+      <div className="max-w-5xl mx-auto space-y-8">
 
-        {/* ═══════ HEADER ═══════ */}
-        <div>
-          <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-            Planes y facturación
-          </h1>
-          <p className={`text-sm mt-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-            Gestiona tu suscripción, método de pago y facturación.
-          </p>
-        </div>
-
-        {/* ═══════ CURRENT PLAN BANNER ═══════ */}
-        <div
-          className={`rounded-xl p-4 flex items-center justify-between flex-wrap gap-4 ${!t ? 'bg-white border border-slate-200' : ''}`}
-          style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide ${
-                isActive
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : isTrial
-                    ? 'bg-amber-100 text-amber-700'
-                    : (!t ? 'bg-slate-100 text-slate-600' : '')
-              }`}
-              style={!isActive && !isTrial && t ? { background: t.subtleBg, color: t.textMuted } : undefined}
-            >
-              {isActive ? 'Activo' : isTrial ? 'Trial' : 'Gratis'}
-            </div>
-            <span className={`text-sm font-medium ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-              {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba Gratuita' : 'Plan Gratuito'}
-            </span>
-            {isActive && sub && (
-              <span className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                · ${sub.price} USD/{sub.billing_cycle === 'monthly' ? 'mes' : 'año'}
-              </span>
-            )}
-            {isTrial && billing?.trial_days_remaining != null && (
-              <span className="text-sm text-amber-600 font-medium">
-                · {billing.trial_days_remaining} días restantes
-              </span>
-            )}
+        {/* ════════════════════════════════════════════════════════
+           HEADER
+           ════════════════════════════════════════════════════════ */}
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className={`text-2xl font-bold ${!t ? 'text-neutral-900' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+              Planes y facturación
+            </h1>
+            <p className={`text-sm mt-1 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+              Gestiona tu suscripción, equipo y método de pago.
+            </p>
           </div>
           {isActive && (
             <button
-              onClick={handleManageSubscription}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${!t ? 'text-indigo-600 hover:bg-indigo-50' : ''}`}
-              style={t ? { color: t.accent } : undefined}
+              onClick={handlePortal}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${!t ? 'border-neutral-200 text-neutral-700 hover:bg-neutral-50' : 'hover:opacity-80'}`}
+              style={t ? { border: `1px solid ${t.cardBorder}`, color: t.textPrimary } : undefined}
             >
-              Gestionar <ExternalLink className="w-3 h-3 inline ml-0.5" />
+              <ExternalLink className="w-4 h-4" />
+              Portal de pagos
             </button>
           )}
         </div>
 
-        {/* ═══════ PLAN SELECTION (when no active sub) ═══════ */}
-        {!isActive && (
-          <>
-            {/* Billing cycle toggle */}
-            <div className="flex items-center justify-center gap-3">
-              <span className={`text-sm font-medium ${!t ? (billingCycle === 'monthly' ? 'text-neutral-800' : 'text-neutral-400') : ''}`}
-                style={t ? { color: billingCycle === 'monthly' ? t.textPrimary : t.textMuted } : undefined}
-              >Mensual</span>
-              <button
-                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
-                className="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
-                style={{ background: billingCycle === 'annual' ? (t ? t.accent : '#6366f1') : (t ? (isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db') : '#d1d5db') }}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
-              <span className={`text-sm font-medium ${!t ? (billingCycle === 'annual' ? 'text-neutral-800' : 'text-neutral-400') : ''}`}
-                style={t ? { color: billingCycle === 'annual' ? t.textPrimary : t.textMuted } : undefined}
-              >Anual</span>
-              {billingCycle === 'annual' && (
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  -17%
-                </span>
-              )}
-            </div>
-
-            {/* Plan Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto items-stretch">
-
-              {/* ── Free Plan Card ── */}
-              <div
-                className={`rounded-2xl flex flex-col ${!t ? 'bg-white border border-slate-200' : ''}`}
-                style={t ? { background: isDark ? 'rgba(0,0,0,0.5)' : '#ffffff', border: `1px solid ${t.cardBorder}` } : undefined}
-              >
-                <div className="p-7 flex-1 flex flex-col">
-                  <div className="mb-6">
-                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${!t ? 'text-slate-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Gratis</p>
-                    <h3 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>Plan Gratuito</h3>
-                    <p className={`text-sm mt-2 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Para empezar a explorar</p>
-                  </div>
-
-                  <div className="flex items-end gap-1 mb-6">
-                    <span className={`text-4xl font-bold tracking-tight ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>$0</span>
-                    <span className={`text-sm mb-1.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>/mes</span>
-                  </div>
-
-                  <div className="space-y-3 flex-1">
-                    {FREE_PLAN_LIMITS.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        {item.included ? (
-                          <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        ) : (
-                          <X className={`w-4 h-4 flex-shrink-0 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: isDark ? '#475569' : '#cbd5e1' } : undefined} />
-                        )}
-                        <span
-                          className={`text-sm ${
-                            item.included
-                              ? (!t ? 'text-neutral-700' : '')
-                              : (!t ? 'text-neutral-400' : '')
-                          }`}
-                          style={t ? { color: item.included ? (isDark ? '#e2e8f0' : '#334155') : (isDark ? '#64748b' : '#94a3b8') } : undefined}
-                        >
-                          {item.text}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="px-7 pb-7">
-                  <div
-                    className={`w-full py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${!t ? 'bg-slate-100 text-slate-500' : ''}`}
-                    style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9', color: isDark ? '#94a3b8' : '#64748b' } : undefined}
-                  >
-                    Plan actual
-                  </div>
-                </div>
+        {/* ════════════════════════════════════════════════════════
+           CURRENT PLAN CARD
+           ════════════════════════════════════════════════════════ */}
+        <div
+          className={`rounded-2xl overflow-hidden ${!t ? 'bg-white border border-neutral-200 shadow-sm' : ''}`}
+          style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+        >
+          {/* ── Banner top ── */}
+          <div
+            className={`px-6 py-5 flex items-center justify-between flex-wrap gap-4 ${
+              isActive
+                ? (!t ? 'bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600' : '')
+                : (!t ? 'bg-gradient-to-r from-neutral-800 to-neutral-700' : '')
+            }`}
+            style={t ? {
+              background: isActive
+                ? `linear-gradient(135deg, ${t.accent}, color-mix(in srgb, ${t.accent} 70%, #7c3aed))`
+                : (isDark ? 'rgba(255,255,255,0.06)' : '#1e293b'),
+            } : undefined}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-white/10'}`}>
+                {isActive ? <Crown className="w-6 h-6 text-white" /> : <Zap className="w-6 h-6 text-white" />}
               </div>
-
-              {/* ── Pro Plan Card ── */}
-              <div
-                className={`rounded-2xl flex flex-col relative ${!t ? 'bg-white border-2 border-indigo-500 shadow-lg shadow-indigo-100' : ''}`}
-                style={t ? { background: isDark ? 'rgba(0,0,0,0.5)' : '#ffffff', border: `2px solid ${t.accent}`, boxShadow: `0 10px 40px -10px color-mix(in srgb, ${t.accent} 25%, transparent)` } : undefined}
-              >
-                {/* Badge */}
-                <div className="absolute -top-3 left-6">
-                  <span className="px-3 py-1 bg-amber-400 text-amber-900 text-xs font-bold rounded-full shadow-sm">
-                    Recomendado
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-lg font-bold text-white">
+                    {isActive ? 'WITHMIA Pro' : isTrial ? 'Prueba gratuita' : 'Plan Gratuito'}
+                  </h2>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${
+                    isActive ? 'bg-emerald-400/25 text-emerald-100' : isTrial ? 'bg-amber-400/25 text-amber-100' : 'bg-white/15 text-white/70'
+                  }`}>
+                    {isActive ? 'Activo' : isTrial ? 'Trial' : 'Free'}
                   </span>
                 </div>
-
-                <div className="p-7 flex-1 flex flex-col">
-                  <div className="mb-6">
-                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>Pro</p>
-                    <h3 className={`text-xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>WITHMIA Pro</h3>
-                    <p className={`text-sm mt-2 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>Todo lo que necesitas para escalar</p>
-                  </div>
-
-                  <div className="flex items-end gap-1 mb-1">
-                    <span className={`text-4xl font-bold tracking-tight ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: isDark ? '#f1f5f9' : '#1e293b' } : undefined}>${basePrice}</span>
-                    <span className={`text-sm mb-1.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: isDark ? '#64748b' : '#94a3b8' } : undefined}>USD/mes</span>
-                  </div>
-                  <p className={`text-xs mb-6 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: isDark ? '#94a3b8' : '#64748b' } : undefined}>
-                    +${perMemberPrice}/mes por miembro adicional
-                  </p>
-
-                  <div className="space-y-3 flex-1">
-                    {PLAN_FEATURES.map((feature, i) => (
-                      <div key={i} className="flex items-center gap-2.5">
-                        <Check className={`w-4 h-4 flex-shrink-0 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined} />
-                        <span className={`text-sm ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: isDark ? '#e2e8f0' : '#334155' } : undefined}>{feature.text}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="px-7 pb-7">
-                  <button
-                    onClick={handleSubscribe}
-                    disabled={subscribing}
-                    className={`w-full py-3 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                    style={t ? { background: t.accent } : undefined}
-                  >
-                    {subscribing ? (
-                      <><Loader className="w-4 h-4 animate-spin" /> Procesando...</>
-                    ) : (
-                      <>Comenzar con Pro <ChevronRight className="w-4 h-4" /></>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ═══════ ACTIVE SUBSCRIPTION DETAILS ═══════ */}
-        {isActive && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Plan overview */}
-            <div
-              className={`rounded-xl p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
-              style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
-            >
-              <h3 className={`text-sm font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Funcionalidades incluidas</h3>
-              <div className="space-y-2.5">
-                {PLAN_FEATURES.slice(0, 5).map((f, i) => (
-                  <div key={i} className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span className={`text-sm ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>{f.text}</span>
-                  </div>
-                ))}
-                <p className={`text-xs font-medium pt-1 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>
-                  + {PLAN_FEATURES.length - 5} más incluidos
+                <p className="text-sm text-white/70 mt-0.5">
+                  {isActive && sub
+                    ? `$${formatCLP(sub.price || basePrice)} CLP/${sub.billing_cycle === 'monthly' ? 'mes' : 'año'}${extraMembers > 0 ? ` · ${teamCount} miembros` : ''}`
+                    : isTrial && billing?.trial_days_remaining != null
+                      ? `${billing.trial_days_remaining} días restantes de prueba`
+                      : 'Sin costo · funcionalidades limitadas'
+                  }
                 </p>
               </div>
-
-              {additionalMembers > 0 && (
-                <div
-                  className={`mt-4 p-3 rounded-lg text-xs ${!t ? 'bg-slate-50 text-slate-600' : ''}`}
-                  style={t ? { background: t.subtleBg, color: t.textSec } : undefined}
-                >
-                  <Users className="w-3.5 h-3.5 inline mr-1" />
-                  Base + {additionalMembers} extra = <strong>${computedTotal}/mes</strong>
-                </div>
-              )}
             </div>
 
-            {/* Payment method */}
-            <div
-              className={`rounded-xl p-6 ${!t ? 'bg-white border border-slate-200' : ''}`}
-              style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
-            >
-              <h3 className={`text-sm font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Método de pago</h3>
-              {sub?.payment_info?.last_four ? (
-                <div className="space-y-4">
-                  <div
-                    className={`flex items-center gap-3 p-3 rounded-lg ${!t ? 'bg-slate-50' : ''}`}
-                    style={t ? { background: t.subtleBg } : undefined}
+            {!isActive && (
+              <button
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                className="px-5 py-2.5 bg-white text-neutral-900 font-semibold text-sm rounded-lg hover:bg-white/90 transition-all shadow-lg disabled:opacity-60 flex items-center gap-2"
+              >
+                {subscribing ? <Loader className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
+                Actualizar a Pro
+              </button>
+            )}
+          </div>
+
+          {/* ── Body ── */}
+          <div className="p-6">
+            {isActive ? (
+              /* Active: 3-col stat cards */
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <StatCard
+                  icon={Calendar} label="Facturación" t={t} isDark={isDark}
+                  value={sub?.billing_cycle === 'annual' ? 'Anual' : 'Mensual'}
+                  sub={sub?.ends_at ? `Próxima: ${formatDate(sub.ends_at)}` : sub?.starts_at ? `Desde: ${formatDate(sub.starts_at)}` : undefined}
+                />
+                <StatCard
+                  icon={Users} label="Equipo" t={t} isDark={isDark}
+                  value={`${teamCount} ${teamCount === 1 ? 'miembro' : 'miembros'}`}
+                  sub={extraMembers > 0 ? `1 incluido + ${extraMembers} extra${extraMembers > 1 ? 's' : ''}` : '1 miembro incluido'}
+                />
+                <StatCard
+                  icon={CreditCard} label="Total" t={t} isDark={isDark}
+                  value={`$${formatCLP(totalCost)} CLP`}
+                  sub={extraMembers > 0 ? `$${formatCLP(basePrice)} base + $${formatCLP(extraMembers * perMemberPrice)} extras` : `/${billingCycle === 'monthly' ? 'mes' : 'año'}`}
+                />
+              </div>
+            ) : (
+              /* Free: plan comparison + upgrade CTA */
+              <div>
+                {/* Toggle */}
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <span className={`text-sm font-medium transition-colors ${billingCycle === 'monthly' ? (!t ? 'text-neutral-800' : '') : (!t ? 'text-neutral-400' : '')}`}
+                    style={t ? { color: billingCycle === 'monthly' ? t.textPrimary : t.textMuted } : undefined}
+                  >Mensual</span>
+                  <button
+                    onClick={() => setBillingCycle(b => b === 'monthly' ? 'annual' : 'monthly')}
+                    className="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
+                    style={{ background: billingCycle === 'annual' ? (t ? t.accent : '#6366f1') : (isDark ? 'rgba(255,255,255,0.15)' : '#d1d5db') }}
                   >
-                    <div
-                      className={`w-10 h-7 rounded flex items-center justify-center ${!t ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : ''}`}
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${billingCycle === 'annual' ? 'translate-x-5' : ''}`} />
+                  </button>
+                  <span className={`text-sm font-medium transition-colors ${billingCycle === 'annual' ? (!t ? 'text-neutral-800' : '') : (!t ? 'text-neutral-400' : '')}`}
+                    style={t ? { color: billingCycle === 'annual' ? t.textPrimary : t.textMuted } : undefined}
+                  >Anual</span>
+                  {billingCycle === 'annual' && (
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Ahorra 20%</span>
+                  )}
+                </div>
+
+                {/* Side-by-side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Free card */}
+                  <div className={`rounded-xl p-5 border ${!t ? 'border-neutral-200 bg-neutral-50/60' : ''}`}
+                    style={t ? { border: `1px solid ${t.cardBorder}`, background: t.subtleBg } : undefined}
+                  >
+                    <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Plan actual</p>
+                    <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Gratuito</h3>
+                    <p className={`text-3xl font-bold mt-1 mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                      $0 <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>/mes</span>
+                    </p>
+                    <div className="space-y-2.5">
+                      {FREE_VS_PRO.map((r, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          {r.free === '—'
+                            ? <X className={`w-4 h-4 mt-0.5 shrink-0 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: isDark ? '#475569' : '#cbd5e1' } : undefined} />
+                            : <Check className="w-4 h-4 mt-0.5 shrink-0 text-emerald-500" />}
+                          <span className={`text-sm ${r.free === '—' ? (!t ? 'text-neutral-400' : '') : (!t ? 'text-neutral-600' : '')}`}
+                            style={t ? { color: r.free === '—' ? t.textMuted : t.textSec } : undefined}
+                          >
+                            {r.feature} <span className="opacity-60">· {r.free}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pro card */}
+                  <div className={`rounded-xl p-5 border-2 relative ${!t ? 'border-indigo-500 bg-white shadow-lg shadow-indigo-100/60' : ''}`}
+                    style={t ? { border: `2px solid ${t.accent}`, background: isDark ? 'rgba(0,0,0,0.3)' : '#fff', boxShadow: `0 8px 30px -8px color-mix(in srgb, ${t.accent} 18%, transparent)` } : undefined}
+                  >
+                    <div className="absolute -top-3 right-5">
+                      <span className="px-3 py-1 bg-amber-400 text-amber-900 text-[10px] font-bold uppercase tracking-wide rounded-full shadow-sm">
+                        Recomendado
+                      </span>
+                    </div>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wider mb-0.5 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined}>WITHMIA Pro</p>
+                    <h3 className={`text-lg font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>Todo incluido</h3>
+                    <div className="mt-1 mb-1">
+                      <span className={`text-3xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                        ${billingCycle === 'annual' ? formatCLP(Math.round(BASE_ANNUAL / 12)) : formatCLP(BASE_MONTHLY)}
+                      </span>
+                      <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
+                    </div>
+                    <p className={`text-xs mb-4 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                      {billingCycle === 'annual' ? `$${formatCLP(BASE_ANNUAL)} facturado al año` : 'IVA incluido · 1 miembro incluido'}
+                    </p>
+                    <div className="space-y-2.5">
+                      {FREE_VS_PRO.map((r, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <Check className={`w-4 h-4 mt-0.5 shrink-0 ${!t ? 'text-indigo-500' : ''}`} style={t ? { color: t.accent } : undefined} />
+                          <span className={`text-sm ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                            {r.feature} <span className="opacity-50">· {r.pro}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subscribing}
+                      className={`w-full mt-5 py-3 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 ${!t ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'hover:opacity-90'}`}
                       style={t ? { background: t.accent } : undefined}
                     >
-                      <CreditCard className="w-4 h-4 text-white" />
-                    </div>
-                    <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textSec } : undefined}>
-                      {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
-                    </p>
+                      {subscribing ? <><Loader className="w-4 h-4 animate-spin" /> Procesando...</> : <>Comenzar con Pro <ArrowUpRight className="w-4 h-4" /></>}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleManageSubscription}
-                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!t ? 'border border-gray-200 text-gray-700 hover:bg-gray-50' : ''}`}
-                    style={t ? { border: `1px solid ${t.inputBorder}`, color: t.textPrimary, background: 'transparent' } : undefined}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Active plan features pills */}
+          {isActive && (
+            <div className="px-6 pb-5">
+              <p className={`text-xs font-medium mb-2.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>Incluido en tu plan:</p>
+              <div className="flex flex-wrap gap-2">
+                {PRO_HIGHLIGHTS.map((f, i) => (
+                  <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full ${!t ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                    style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : t.accentLight, color: t.accent } : undefined}
                   >
-                    Cambiar método <ExternalLink className="w-3.5 h-3.5" />
+                    <f.icon className="w-3 h-3" /> {f.text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ════════════════════════════════════════════════════════
+           TEAM MEMBERS SECTION
+           ════════════════════════════════════════════════════════ */}
+        <div
+          className={`rounded-2xl overflow-hidden ${!t ? 'bg-white border border-neutral-200 shadow-sm' : ''}`}
+          style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+        >
+          {/* Header */}
+          <div className={`px-6 py-4 flex items-center justify-between border-b ${!t ? 'border-neutral-100' : ''}`}
+            style={t ? { borderColor: t.cardBorder } : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${!t ? 'bg-indigo-50' : ''}`}
+                style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : t.accentLight } : undefined}
+              >
+                <Users className={`w-4.5 h-4.5 ${!t ? 'text-indigo-600' : ''}`} style={t ? { color: t.accent } : undefined} />
+              </div>
+              <div>
+                <h3 className={`text-sm font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                  Equipo
+                </h3>
+                <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                  {teamCount} {teamCount === 1 ? 'miembro' : 'miembros'}
+                  {pending.length > 0 && ` · ${pending.length} pendiente${pending.length > 1 ? 's' : ''}`}
+                </p>
+              </div>
+            </div>
+
+            {isActive && (
+              <button
+                onClick={() => setShowInviteForm(v => !v)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  showInviteForm
+                    ? (!t ? 'bg-neutral-100 text-neutral-500' : '')
+                    : (!t ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' : '')
+                }`}
+                style={t ? {
+                  background: showInviteForm ? t.subtleBg : (isDark ? 'rgba(255,255,255,0.06)' : t.accentLight),
+                  color: showInviteForm ? t.textMuted : t.accent,
+                } : undefined}
+              >
+                {showInviteForm ? <X className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                {showInviteForm ? 'Cancelar' : 'Invitar'}
+              </button>
+            )}
+          </div>
+
+          {/* Invite form */}
+          {showInviteForm && isActive && (
+            <div className={`px-6 py-4 border-b ${!t ? 'bg-neutral-50/80 border-neutral-100' : ''}`}
+              style={t ? { borderColor: t.cardBorder, background: t.subtleBg } : undefined}
+            >
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
+                  placeholder="email@ejemplo.com"
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
+                  style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
+                />
+                <input
+                  type="text" value={inviteName} onChange={e => setInviteName(e.target.value)}
+                  placeholder="Nombre (opcional)"
+                  className={`w-full sm:w-40 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-neutral-200 bg-white text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
+                  style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
+                />
+                <select
+                  value={inviteRole} onChange={e => setInviteRole(e.target.value as 'agent' | 'administrator')}
+                  className={`w-full sm:w-36 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-neutral-200 bg-white text-neutral-800' : ''}`}
+                  style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
+                >
+                  <option value="agent">Agente</option>
+                  <option value="administrator">Admin</option>
+                </select>
+                <button
+                  onClick={handleInviteMember} disabled={inviting || !inviteEmail.trim()}
+                  className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : 'hover:opacity-90'}`}
+                  style={t ? { background: t.accent } : undefined}
+                >
+                  {inviting ? <Loader className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  Pagar e invitar
+                </button>
+              </div>
+              <p className={`text-[11px] mt-2 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                Cada miembro adicional: ${formatCLP(MEMBER_MONTHLY)}/mes o ${formatCLP(MEMBER_ANNUAL)}/año. Se redirige a Flow.cl para el pago.
+              </p>
+            </div>
+          )}
+
+          {/* Not active: lock */}
+          {!isActive && (
+            <div className="px-6 py-5 flex items-center gap-3">
+              <Lock className={`w-4 h-4 ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+              <p className={`text-sm ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                La gestión de equipo está disponible en WITHMIA Pro.
+              </p>
+            </div>
+          )}
+
+          {/* Members list */}
+          {isActive && (
+            <div>
+              {loadingTeam ? (
+                <div className="px-6 py-8 flex justify-center">
+                  <Loader className={`w-5 h-5 animate-spin ${!t ? 'text-neutral-300' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                </div>
+              ) : (
+                <>
+                  {agents.map(agent => (
+                    <div key={agent.id}
+                      className={`px-6 py-3.5 flex items-center justify-between border-b last:border-b-0 ${!t ? 'border-neutral-100 hover:bg-neutral-50/60' : ''} transition-colors`}
+                      style={t ? { borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' } : undefined}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${!t ? 'bg-gradient-to-br from-indigo-500 to-violet-500' : ''}`}
+                          style={t ? { background: t.accent } : undefined}
+                        >
+                          {agent.avatar_url
+                            ? <img src={agent.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                            : (agent.name?.[0] || agent.email?.[0] || '?').toUpperCase()
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-sm font-medium truncate ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                            {agent.name || agent.email}
+                          </p>
+                          {agent.name && (
+                            <p className={`text-xs truncate ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                              {agent.email}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                        agent.role === 'administrator' ? 'bg-amber-100 text-amber-700' : (!t ? 'bg-neutral-100 text-neutral-500' : '')
+                      }`}
+                        style={agent.role !== 'administrator' && t ? { background: t.subtleBg, color: t.textMuted } : undefined}
+                      >
+                        {agent.role === 'administrator' ? 'Admin' : 'Agente'}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Pending invitations */}
+                  {pending.map(inv => (
+                    <div key={inv.id}
+                      className={`px-6 py-3.5 flex items-center justify-between border-b last:border-b-0 ${!t ? 'border-neutral-100' : ''}`}
+                      style={t ? { borderColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' } : undefined}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 border-dashed shrink-0 ${!t ? 'border-neutral-300 bg-neutral-50' : ''}`}
+                          style={t ? { borderColor: t.cardBorder, background: t.subtleBg } : undefined}
+                        >
+                          <Mail className={`w-3.5 h-3.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-sm font-medium truncate ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
+                            {inv.name || inv.email}
+                          </p>
+                          <p className="text-xs text-amber-500">
+                            Pendiente · {formatDate(inv.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleCancelInvitation(inv.id)}
+                        className={`p-1.5 rounded-lg transition-colors ${!t ? 'text-neutral-400 hover:text-red-500 hover:bg-red-50' : ''}`}
+                        style={t ? { color: t.textMuted } : undefined}
+                        title="Cancelar invitación"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {agents.length === 0 && pending.length === 0 && (
+                    <div className="px-6 py-8 text-center">
+                      <Users className={`w-8 h-8 mx-auto mb-2 ${!t ? 'text-neutral-200' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                      <p className={`text-sm ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                        Invita a tu primer compañero de equipo.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ════════════════════════════════════════════════════════
+           PAYMENT METHOD (active only)
+           ════════════════════════════════════════════════════════ */}
+        {isActive && (
+          <div
+            className={`rounded-2xl overflow-hidden ${!t ? 'bg-white border border-neutral-200 shadow-sm' : ''}`}
+            style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
+          >
+            <div className={`px-6 py-4 flex items-center gap-3 border-b ${!t ? 'border-neutral-100' : ''}`}
+              style={t ? { borderColor: t.cardBorder } : undefined}
+            >
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${!t ? 'bg-emerald-50' : ''}`}
+                style={t ? { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.08)' } : undefined}
+              >
+                <CreditCard className={`w-4.5 h-4.5 ${!t ? 'text-emerald-600' : ''}`} style={t ? { color: isDark ? '#34d399' : '#059669' } : undefined} />
+              </div>
+              <h3 className={`text-sm font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                Método de pago
+              </h3>
+            </div>
+            <div className="p-6">
+              {sub?.payment_info?.last_four ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-8 rounded-md flex items-center justify-center ${!t ? 'bg-gradient-to-br from-neutral-700 to-neutral-900' : ''}`}
+                      style={t ? { background: isDark ? 'rgba(255,255,255,0.1)' : '#1e293b' } : undefined}
+                    >
+                      <CreditCard className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                        {sub.payment_info.card_brand || 'Tarjeta'} •••• {sub.payment_info.last_four}
+                      </p>
+                      <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                        Predeterminada
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={handlePortal}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${!t ? 'text-indigo-600 hover:bg-indigo-50' : ''}`}
+                    style={t ? { color: t.accent } : undefined}
+                  >
+                    Cambiar
                   </button>
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <CreditCard className={`w-8 h-8 mx-auto mb-2 ${!t ? 'text-slate-300' : ''}`} style={t ? { color: t.textMuted } : undefined} />
-                  <p className={`text-sm mb-3 ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                    Sin método registrado
-                  </p>
-                  <button
-                    onClick={handleSubscribe}
-                    className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${!t ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
-                    style={t ? { background: t.accent } : undefined}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-8 rounded-md flex items-center justify-center ${!t ? 'bg-neutral-100' : ''}`}
+                      style={t ? { background: t.subtleBg } : undefined}
+                    >
+                      <CreditCard className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium ${!t ? 'text-neutral-600' : ''}`} style={t ? { color: t.textSec } : undefined}>
+                        Pagos gestionados por Flow.cl
+                      </p>
+                      <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                        Tarjetas, transferencia y más
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={handlePortal}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${!t ? 'text-indigo-600 hover:bg-indigo-50' : ''}`}
+                    style={t ? { color: t.accent } : undefined}
                   >
-                    Agregar método
+                    Gestionar
                   </button>
                 </div>
               )}
@@ -536,9 +808,11 @@ export default function SubscriptionPage() {
           </div>
         )}
 
-        {/* ═══════ TRUST SIGNALS ═══════ */}
+        {/* ════════════════════════════════════════════════════════
+           TRUST SIGNALS (free users)
+           ════════════════════════════════════════════════════════ */}
         {!isActive && (
-          <div className="flex flex-wrap items-center justify-center gap-6 py-2">
+          <div className="flex flex-wrap items-center justify-center gap-6 py-1">
             {[
               { icon: Shield, label: 'Pagos seguros SSL' },
               { icon: RefreshCw, label: 'Cancela cuando quieras' },
@@ -553,10 +827,12 @@ export default function SubscriptionPage() {
           </div>
         )}
 
-        {/* ═══════ REFERRAL ═══════ */}
+        {/* ════════════════════════════════════════════════════════
+           REFERRAL CODE
+           ════════════════════════════════════════════════════════ */}
         <div>
           <button
-            onClick={() => setShowReferral(!showReferral)}
+            onClick={() => setShowReferral(v => !v)}
             className={`flex items-center gap-2 text-sm font-medium ${!t ? 'text-neutral-600 hover:text-neutral-800' : ''}`}
             style={t ? { color: t.textSec } : undefined}
           >
@@ -567,17 +843,14 @@ export default function SubscriptionPage() {
           {showReferral && (
             <div className="mt-3 flex gap-3 max-w-md">
               <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
+                type="text" value={referralCode} onChange={e => setReferralCode(e.target.value)}
                 placeholder="Código de referido"
-                className={`flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-gray-200 text-gray-900 placeholder:text-gray-400 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none ${!t ? 'border border-neutral-200 text-neutral-900 placeholder:text-neutral-400 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400' : 'placeholder:opacity-50'}`}
                 style={t ? { background: t.inputBg, border: `1px solid ${t.inputBorder}`, color: t.textPrimary } : undefined}
               />
               <button
-                onClick={handleApplyReferral}
-                disabled={applyingReferral || !referralCode.trim()}
-                className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${!t ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-white'}`}
+                onClick={handleApplyReferral} disabled={applyingReferral || !referralCode.trim()}
+                className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${!t ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'text-white hover:opacity-90'}`}
                 style={t ? { background: t.accent } : undefined}
               >
                 {applyingReferral ? <Loader className="w-4 h-4 animate-spin" /> : 'Aplicar'}
@@ -586,25 +859,24 @@ export default function SubscriptionPage() {
           )}
         </div>
 
-        {/* ═══════ FAQ ═══════ */}
+        {/* ════════════════════════════════════════════════════════
+           FAQ
+           ════════════════════════════════════════════════════════ */}
         <div>
           <h2 className={`text-lg font-semibold mb-4 ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
             Preguntas frecuentes
           </h2>
           <div className="space-y-2">
             {FAQ_ITEMS.map((item, i) => (
-              <div
-                key={i}
-                className={`rounded-xl overflow-hidden transition-colors ${!t ? 'bg-white border border-slate-200' : ''}`}
+              <div key={i}
+                className={`rounded-xl overflow-hidden ${!t ? 'bg-white border border-neutral-200' : ''}`}
                 style={t ? { background: t.cardBg, border: `1px solid ${t.cardBorder}` } : undefined}
               >
-                <button
-                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                <button onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                   className="w-full flex items-center justify-between px-5 py-4 text-left"
                 >
                   <span className={`text-sm font-medium ${!t ? 'text-neutral-700' : ''}`} style={t ? { color: t.textPrimary } : undefined}>{item.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${!t ? 'text-neutral-400' : ''} ${faqOpen === i ? 'rotate-180' : ''}`}
+                  <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${!t ? 'text-neutral-400' : ''} ${faqOpen === i ? 'rotate-180' : ''}`}
                     style={t ? { color: t.textMuted } : undefined}
                   />
                 </button>
@@ -620,7 +892,9 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        {/* ═══════ FOOTER ═══════ */}
+        {/* ════════════════════════════════════════════════════════
+           FOOTER
+           ════════════════════════════════════════════════════════ */}
         <div className="text-center pb-4">
           <p className={`text-xs ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
             ¿Necesitas ayuda?{' '}
@@ -629,10 +903,9 @@ export default function SubscriptionPage() {
             </a>
           </p>
         </div>
-
       </div>
 
-      {/* Notification Toast */}
+      {/* ═══════ NOTIFICATION TOAST ═══════ */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in-right">
           <div className={`px-5 py-3 rounded-lg shadow-2xl backdrop-blur-md border flex items-center gap-3 ${
@@ -649,4 +922,42 @@ export default function SubscriptionPage() {
       )}
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════
+   STAT CARD COMPONENT
+   ═══════════════════════════════════════════ */
+function StatCard({ icon: Icon, label, value, sub, t, isDark }: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  label: string;
+  value: string;
+  sub?: string;
+  t: ReturnType<typeof useStatCardTheme> | null;
+  isDark: boolean;
+}) {
+  return (
+    <div className={`p-4 rounded-xl ${!t ? 'bg-neutral-50' : ''}`} style={t ? { background: t.subtleBg } : undefined}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className={`w-4 h-4 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+        <span className={`text-[11px] font-semibold uppercase tracking-wider ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+          {label}
+        </span>
+      </div>
+      <p className={`text-sm font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+        {value}
+      </p>
+      {sub && (
+        <p className={`text-xs mt-0.5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+          {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Helper type for StatCard theme
+function useStatCardTheme() {
+  return null as unknown as {
+    subtleBg: string; textMuted: string; textPrimary: string;
+  };
 }

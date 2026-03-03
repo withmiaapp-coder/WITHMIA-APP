@@ -15,15 +15,23 @@ const jsonLd = [
         "@type": "Offer",
         name: "Plan Gratuito",
         price: "0",
-        priceCurrency: "USD",
+        priceCurrency: "CLP",
         url: "https://withmia.com/precios",
         availability: "https://schema.org/InStock",
       },
       {
         "@type": "Offer",
-        name: "WITHMIA Pro",
-        price: "18",
-        priceCurrency: "USD",
+        name: "WITHMIA Pro Mensual",
+        price: "19990",
+        priceCurrency: "CLP",
+        url: "https://withmia.com/precios",
+        availability: "https://schema.org/InStock",
+      },
+      {
+        "@type": "Offer",
+        name: "WITHMIA Pro Anual",
+        price: "189990",
+        priceCurrency: "CLP",
         url: "https://withmia.com/precios",
         availability: "https://schema.org/InStock",
       },
@@ -34,7 +42,7 @@ const jsonLd = [
 
 <Layout
   title="Precios"
-  description="Precios de WITHMIA. Plan Gratuito para empezar y WITHMIA Pro desde $18/mes. IA conversacional, inbox omnicanal y automatización para tu equipo."
+  description="Precios de WITHMIA. Plan Gratuito para empezar y WITHMIA Pro desde $19.990/mes (IVA incluido). IA conversacional, inbox omnicanal y automatización para tu equipo."
   path="/precios"
   jsonLd={jsonLd}
 >

@@ -23,9 +23,6 @@ export const Footer = () => {
             <p className="text-sm text-white/50 leading-relaxed">
               Una plataforma inteligente con IA conversacional que potencia tus ventas y automatiza la atención de tu negocio.
             </p>
-            <p className="text-sm font-medium tracking-wide">
-              <span className="text-white/70">WITHMIA</span>
-            </p>
           </div>
 
           {/* Links — 4 columns together */}

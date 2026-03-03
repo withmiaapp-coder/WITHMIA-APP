@@ -199,9 +199,9 @@ export const Hero = () => {
               <ArrowRight className="w-4 h-4" />
               Comenzar ahora
           </a>
-          <Link to="/contacto" onClick={() => trackCTAClick('agenda_demo', 'hero', '/contacto')} className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
+          <Link to="/contacto" onClick={() => trackCTAClick('contactar_ventas', 'hero', '/contacto')} className="group inline-flex items-center gap-2 px-6 py-3 rounded-full bg-transparent text-white font-semibold text-sm border border-white/25 hover:border-white/50 hover:bg-white/[0.06] hover:-translate-y-0.5 transition-all duration-300">
               <CalendarCheck className="w-4 h-4" />
-              Agenda una demo
+              Contactar ventas
           </Link>
         </div>
 

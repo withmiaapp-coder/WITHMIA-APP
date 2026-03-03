@@ -140,6 +140,13 @@ class OnboardingController extends Controller
                     'company_slug' => $user->company_slug,
                     'dashboard_url' => route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token
                 ];
+
+                // If user came from pricing with a plan, redirect to billing instead of dashboard
+                $pendingPlan = session()->pull('pending_plan');
+                if ($pendingPlan && in_array($pendingPlan, ['pro-monthly', 'pro-annual'])) {
+                    $completionData['dashboard_url'] = route('dashboard.company', ['companySlug' => $user->company_slug])
+                        . '?auth_token=' . $user->auth_token . '&section=subscription&plan=' . $pendingPlan;
+                }
             }
 
             if ($isJsonRequest) {

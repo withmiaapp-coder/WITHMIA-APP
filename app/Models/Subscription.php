@@ -20,9 +20,12 @@ class Subscription extends Model
         'starts_at',
         'ends_at',
         'trial_ends_at',
+        'cancelled_at',
         'payment_info',
         'dlocal_payment_id',
         'dlocal_subscription_id',
+        'flow_subscription_id',
+        'flow_customer_id',
     ];
 
     protected $casts = [

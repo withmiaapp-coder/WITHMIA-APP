@@ -1,20 +1,20 @@
 const tools = [
-  { name: "WhatsApp", logo: "/icons/whatsapp.webp" },
-  { name: "Instagram", logo: "/icons/instagram-new.webp" },
-  { name: "Messenger", logo: "/icons/facebook-new.webp" },
-  { name: "Gmail", logo: "/icons/gmail-new.webp" },
-  { name: "Chat Web", logo: "/icons/web-new.webp" },
-  { name: "API REST", logo: "/icons/api-final.webp" },
-  { name: "WooCommerce", logo: "/logos/woocommerce.svg" },
-  { name: "Shopify", logo: "/logos/shopify.svg" },
-  { name: "Google Calendar", logo: "/logos/google-calendar.svg" },
-  { name: "AgendaPro", logo: "/icons/agendapro-icon.svg" },
-  { name: "Reservo", logo: "/icons/reservo.webp" },
-  { name: "Dentalink", logo: "/logos/dentalink.svg" },
-  { name: "Medilink", logo: "/logos/medilink.svg" },
-  { name: "MercadoLibre", logo: "/logos/mercadolibre.svg" },
-  { name: "Webhooks", logo: "/logos/webhooks.svg" },
-  { name: "Calendly", logo: "/logos/calendly.svg" },
+  { name: "WhatsApp", logo: "/icons/whatsapp.webp", url: "https://www.whatsapp.com" },
+  { name: "Instagram", logo: "/icons/instagram-new.webp", url: "https://www.instagram.com" },
+  { name: "Messenger", logo: "/icons/facebook-new.webp", url: "https://www.messenger.com" },
+  { name: "Gmail", logo: "/icons/gmail-new.webp", url: "https://mail.google.com" },
+  { name: "Chat Web", logo: "/icons/web-new.webp", url: "https://withmia.com/integraciones" },
+  { name: "API REST", logo: "/icons/api-final.webp", url: "https://withmia.com/integraciones" },
+  { name: "WooCommerce", logo: "/logos/woocommerce.svg", url: "https://woocommerce.com" },
+  { name: "Shopify", logo: "/logos/shopify.svg", url: "https://www.shopify.com" },
+  { name: "Google Calendar", logo: "/logos/google-calendar.svg", url: "https://calendar.google.com" },
+  { name: "AgendaPro", logo: "/icons/agendapro-icon.svg", url: "https://www.agendapro.com" },
+  { name: "Reservo", logo: "/icons/reservo.webp", url: "https://www.reservo.cl" },
+  { name: "Dentalink", logo: "/logos/dentalink.svg", url: "https://www.dentalink.com" },
+  { name: "Medilink", logo: "/logos/medilink.svg", url: "https://www.medilink.cl" },
+  { name: "MercadoLibre", logo: "/logos/mercadolibre.svg", url: "https://www.mercadolibre.cl" },
+  { name: "Webhooks", logo: "/logos/webhooks.svg", url: "https://withmia.com/integraciones" },
+  { name: "Calendly", logo: "/logos/calendly.svg", url: "https://calendly.com" },
 ];
 
 // Triple for seamless infinite scroll
@@ -35,9 +35,12 @@ export const ToolsCarousel = () => {
       {/* Scrolling track */}
       <div className="flex animate-scroll-x gap-6 items-center w-max">
         {tripled.map((tool, i) => (
-          <div
+          <a
             key={`${tool.name}-${i}`}
-            className="flex items-center gap-2.5 shrink-0 px-4 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-300 group"
+            href={tool.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 shrink-0 px-4 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-300 group cursor-pointer"
           >
             <img
               src={tool.logo}
@@ -49,7 +52,7 @@ export const ToolsCarousel = () => {
             <span className="text-sm text-white/40 group-hover:text-amber-300/90 font-medium whitespace-nowrap transition-colors duration-300">
               {tool.name}
             </span>
-          </div>
+          </a>
         ))}
       </div>
     </section>

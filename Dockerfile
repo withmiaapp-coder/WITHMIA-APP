@@ -60,9 +60,13 @@ COPY . .
 # Copy frontend build from stage 1
 COPY --from=frontend /app/public/build public/build
 
-# Finalize (BROADCAST_DRIVER=null prevents broadcaster init during build where env vars are unavailable)
-RUN BROADCAST_DRIVER=null composer dump-autoload --optimize \
-    && (php artisan storage:link || true) \
+# Finalize (env overrides prevent broadcaster init during build where env vars are unavailable)
+RUN BROADCAST_DRIVER=null BROADCAST_CONNECTION=log \
+    REVERB_APP_KEY=buildkey REVERB_APP_SECRET=buildsecret REVERB_APP_ID=build \
+    composer dump-autoload --optimize \
+    && (BROADCAST_DRIVER=null BROADCAST_CONNECTION=log \
+        REVERB_APP_KEY=buildkey REVERB_APP_SECRET=buildsecret REVERB_APP_ID=build \
+        php artisan storage:link || true) \
     && chmod -R 775 storage bootstrap/cache
 
 # Non-root user

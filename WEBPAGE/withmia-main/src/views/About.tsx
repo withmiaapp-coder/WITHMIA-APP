@@ -19,6 +19,7 @@ import {
   BarChart3,
   Brain,
   LineChart,
+  Wrench,
   User,
   Linkedin,
   Sparkles,
@@ -130,6 +131,14 @@ const timeline = [
     icon: TrendingUp,
     color: "cyan",
     emoji: "🚀",
+  },
+  {
+    period: "2025 – 2026",
+    title: "Construcción de la plataforma",
+    desc: "Desarrollo completo de WITHMIA: IA conversacional, inbox omnicanal, pagos con Flow.cl y sistema de suscripciones",
+    icon: Wrench,
+    color: "amber",
+    emoji: "🛠️",
   },
   {
     period: "Próximamente",
@@ -406,12 +415,12 @@ const About = () => {
                 {timeline.map((step, i) => {
                   const c = colorMap[step.color];
                   const heights = ["h-[280px]", "h-[310px]", "h-[340px]", "h-[370px]", "h-[400px]", "h-[440px]"];
-                  const mdHeights = ["md:h-[290px]", "md:h-[320px]", "md:h-[350px]", "md:h-[380px]", "md:h-[420px]", "md:h-[460px]"];
-                  const delays = [200, 350, 500, 650, 800, 950];
+                  const mdHeights = ["md:h-[270px]", "md:h-[295px]", "md:h-[320px]", "md:h-[345px]", "md:h-[370px]", "md:h-[405px]", "md:h-[440px]"];
+                  const delays = [200, 350, 500, 650, 800, 950, 1100];
                   const xpPercent = Math.round(((i + 1) / timeline.length) * 100);
-                  // Levels 0-3 are completed (solid), 4-5 are upcoming (slightly dimmer)
-                  const isCompleted = i <= 3;
-                  const isCurrent = i === 4;
+                  // Levels 0-4 are completed (solid), 5 is current, 6 is future
+                  const isCompleted = i <= 4;
+                  const isCurrent = i === 5;
 
                   return (
                     <div
@@ -547,11 +556,11 @@ const About = () => {
                 }}
               >
                 <span className="text-[11px] text-white/15 font-mono">
-                  4/6 completados
+                  5/7 completados
                 </span>
                 <span className="inline-flex items-center gap-2 text-[11px] text-white/20 font-mono">
                   <span className="text-amber-400/50">▸</span>
-                  Siguiente: Lvl 05
+                  Siguiente: Lvl 06
                   <span className="inline-block w-1 h-3 bg-white/15 animate-pulse rounded-sm" />
                 </span>
               </div>

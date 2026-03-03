@@ -1,3 +1,4 @@
+// IntegrationSection – v2.1
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   MessageCircle, 
@@ -39,6 +40,7 @@ import {
   Shield,
   Smartphone,
   Download,
+  Lock,
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemedSelect } from './ui/ThemedSelect';
@@ -96,6 +98,8 @@ interface IntegrationSectionProps {
   isUpdatingSettings?: boolean;
   onIntegrationChange?: () => void;
   onNavigateToProducts?: () => void;
+  onNavigateToSubscription?: () => void;
+  isPro?: boolean;
 }
 
 const IntegrationSection: React.FC<IntegrationSectionProps> = ({
@@ -107,6 +111,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
   isUpdatingSettings = false,
   onIntegrationChange,
   onNavigateToProducts,
+  onNavigateToSubscription,
+  isPro = false,
 }) => {
   const { hasTheme, isDark } = useTheme();
 
@@ -999,7 +1005,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       fallbackIcon: Mail,
       iconBg: 'from-red-500 to-orange-500',
       status: getChannelStatus('email'),
-      available: true
+      available: true,
+      proOnly: true
     },
     {
       id: 'instagram',
@@ -1009,7 +1016,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       fallbackIcon: MessageSquare,
       iconBg: 'from-pink-500 to-rose-500',
       status: getChannelStatus('instagram'),
-      available: true
+      available: true,
+      proOnly: true
     },
     {
       id: 'messenger',
@@ -1019,7 +1027,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       fallbackIcon: Mail,
       iconBg: 'from-blue-500 to-indigo-500',
       status: getChannelStatus('messenger'),
-      available: true
+      available: true,
+      proOnly: true
     },
     {
       id: 'whatsapp-api',
@@ -1029,7 +1038,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
       fallbackIcon: Smartphone,
       iconBg: 'from-emerald-600 to-teal-600',
       status: getChannelStatus('whatsapp-api'),
-      available: true
+      available: true,
+      proOnly: true
     },
   ];
 
@@ -1121,10 +1131,13 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
               >
                 {/* Channel Header */}
                 <div 
-                  className={`flex items-center justify-between p-4 cursor-pointer ${
-                    channel.available ? '' : 'opacity-75'
+                  className={`flex items-center justify-between p-4 ${
+                    !isPro && channel.proOnly ? 'opacity-50 cursor-pointer' : channel.available ? 'cursor-pointer' : 'opacity-75'
                   }`}
-                  onClick={() => channel.available && toggleChannel(channel.id)}
+                  onClick={() => {
+                    if (!isPro && channel.proOnly) { onNavigateToSubscription?.(); return; }
+                    channel.available && toggleChannel(channel.id);
+                  }}
                 >
                   <div className="flex items-center gap-4">
                     {/* Icon */}
@@ -1146,17 +1159,30 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
                     
                     {/* Info */}
                     <div>
-                      <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{channel.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{channel.name}</h3>
+                        {!isPro && channel.proOnly && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                            <Lock className="w-3 h-3" /> PRO
+                          </span>
+                        )}
+                      </div>
                       <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{channel.description}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {getStatusBadge(channel.status)}
-                    {channel.available && (
-                      expandedChannel === channel.id 
-                        ? <ChevronDown className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
-                        : <ChevronRight className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                    {!isPro && channel.proOnly ? (
+                      <Lock className="w-5 h-5 text-amber-500" />
+                    ) : (
+                      <>
+                        {getStatusBadge(channel.status)}
+                        {channel.available && (
+                          expandedChannel === channel.id 
+                            ? <ChevronDown className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                            : <ChevronRight className={`w-5 h-5 ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -2316,8 +2342,46 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
           <div className="flex items-center gap-2 mb-4">
             <Settings className={`w-5 h-5 ${!t ? 'text-purple-600' : ''}`} style={t ? { color: t.accent } : undefined} />
             <h2 className={`text-xl font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>Herramientas</h2>
+            {!isPro && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                <Lock className="w-3 h-3" /> PRO
+              </span>
+            )}
           </div>
 
+          {!isPro ? (
+            <div className="space-y-3">
+              {tools.map((tool) => (
+                <div
+                  key={tool.id}
+                  className={`rounded-xl border transition-all duration-200 ${!t ? 'bg-white border-slate-200 shadow-sm' : 'shadow-sm'}`}
+                  style={t ? { background: t.cardBg, borderColor: t.cardBorder } : undefined}
+                >
+                  <div
+                    className="flex items-center justify-between p-4 opacity-50 cursor-pointer"
+                    onClick={() => onNavigateToSubscription?.()}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-xl shadow-md border ${!t ? 'bg-white border-slate-200' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
+                        <tool.icon className="w-5 h-5" style={{ color: tool.color }} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className={`font-semibold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.text } : undefined}>{tool.name}</h3>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                            <Lock className="w-3 h-3" /> PRO
+                          </span>
+                        </div>
+                        <p className={`text-sm ${!t ? 'text-neutral-500' : ''}`} style={t ? { color: t.textMuted } : undefined}>{tool.description}</p>
+                      </div>
+                    </div>
+                    <Lock className="w-5 h-5 text-amber-500" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
           {/* Tip de buenas prácticas */}
           <div className={`mb-4 p-3 border rounded-xl flex items-start gap-2.5 ${!t ? 'bg-amber-50 border-amber-200/60' : ''}`} style={t ? { background: t.inputBg, borderColor: t.cardBorder } : undefined}>
             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -3225,6 +3289,8 @@ const IntegrationSection: React.FC<IntegrationSectionProps> = ({
             })()}
 
           </div>
+          </>
+          )}
         </div>
 
       </div>

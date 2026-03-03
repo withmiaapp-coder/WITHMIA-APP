@@ -19,7 +19,10 @@ class DashboardController extends Controller
         // Si no se proporciona un slug, usar el slug de la empresa del usuario
         if (!$companySlug) {
             $companySlug = $user->company_slug ?? Str::slug($user->name ?? 'mi-empresa');
-            return redirect("/dashboard/{$companySlug}");
+            // Preservar query params (e.g., ?section=support) en la redirección
+            $query = request()->getQueryString();
+            $url = "/dashboard/{$companySlug}" . ($query ? "?{$query}" : '');
+            return redirect($url);
         }
 
         // Buscar la empresa: primero por company_slug del usuario, luego por user_id

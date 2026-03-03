@@ -479,7 +479,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     return (
       <div className="relative inline-flex items-center justify-center">
         <svg width={size} height={size} className="transform -rotate-90">
-          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={t?.trackStroke || '#f3f4f6'} strokeWidth={strokeWidth} />
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={t?.trackStroke || '#e5e7eb'} strokeWidth={strokeWidth} />
           <circle
             cx={size/2} cy={size/2} r={radius} fill="none"
             stroke={color} strokeWidth={strokeWidth}
@@ -489,8 +489,8 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-extrabold" style={t ? { color: t.value } : undefined}>{value}%</span>
-          {label && <span className="text-[10px] font-semibold uppercase tracking-wider mt-0.5" style={t ? { color: t.label } : undefined}>{label}</span>}
+          <span className={`text-2xl font-extrabold ${!t ? 'text-gray-800' : ''}`} style={t ? { color: t.value } : undefined}>{value}%</span>
+          {label && <span className={`text-[10px] font-semibold uppercase tracking-wider mt-0.5 ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.label } : undefined}>{label}</span>}
         </div>
       </div>
     );
@@ -703,7 +703,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
       {/* ═══════════ PERFORMANCE + SECONDARY ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ animation: 'fadeInUp 0.6s ease-out 300ms both' }}>
         {/* Circular gauge */}
-        <div className={`backdrop-blur-sm rounded-2xl p-6 border flex flex-col items-center justify-center transition-all duration-500 ${!t ? 'bg-white border-gray-200/80 shadow-sm hover:shadow-xl hover:shadow-gray-300/30' : 'hover:shadow-xl'}`} style={cardStyle()}>
+        <div className={`backdrop-blur-sm rounded-2xl p-6 border flex flex-col items-center justify-center transition-all duration-500 ${!t ? 'bg-white border-gray-200 shadow-sm hover:shadow-xl hover:shadow-gray-300/40' : 'hover:shadow-xl'}`} style={cardStyle()}>
           <CircularProgress
             value={parseFloat(metrics.resolutionRate as string) || 0}
             size={130}
@@ -711,7 +711,7 @@ const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
             color={parseFloat(metrics.resolutionRate as string) >= 70 ? '#10b981' : parseFloat(metrics.resolutionRate as string) >= 40 ? '#f59e0b' : '#ef4444'}
             label="Resolución"
           />
-          <p className={`text-xs mt-3 font-medium text-center ${!t ? 'text-gray-400' : ''}`} style={t ? { color: t.muted } : undefined}>Tasa de resolución general</p>
+          <p className={`text-xs mt-3 font-medium text-center ${!t ? 'text-gray-500' : ''}`} style={t ? { color: t.muted } : undefined}>Tasa de resolución general</p>
         </div>
 
         {/* Secondary metrics */}

@@ -98,7 +98,7 @@ const Terms = () => {
               Términos y <span className="text-gradient">Condiciones</span>
             </h1>
             <p className="text-white/40 max-w-xl mx-auto">
-              Última actualización: 26 de febrero de 2026
+              Última actualización: 27 de febrero de 2026
             </p>
           </div>
         </section>
@@ -222,13 +222,18 @@ const Terms = () => {
                       El Servicio está disponible en diferentes planes con distintos niveles de funcionalidad y precios. Al suscribirse a un plan de pago, usted acepta:
                     </p>
                     <ul className="list-disc list-inside mt-3 space-y-2 text-white/40">
-                      <li>Pagar las tarifas correspondientes al plan seleccionado</li>
+                      <li>Pagar las tarifas correspondientes al plan seleccionado, expresadas en <strong className="text-white/50">pesos chilenos (CLP)</strong></li>
+                      <li>Que todos los precios publicados <strong className="text-white/50">incluyen IVA (19%)</strong> conforme a la legislación tributaria vigente en Chile</li>
                       <li>Que la facturación se realizará de forma mensual o anual según la modalidad elegida</li>
+                      <li>Que el plan anual se cobra como <strong className="text-white/50">pago único anticipado</strong> por el período completo de 12 meses</li>
                       <li>Que los precios pueden ser modificados con un aviso previo de 30 días</li>
-                      <li>Que los pagos realizados no son reembolsables, salvo lo dispuesto en la sección de cancelación</li>
+                      <li>Que los pagos realizados no son reembolsables, salvo lo dispuesto en la sección de cancelación o lo establecido por la Ley N° 19.496</li>
                     </ul>
                     <p className="mt-3">
-                      Los impuestos aplicables (IVA, u otros) serán agregados al precio del plan según la legislación vigente en Chile.
+                      Los pagos se procesan de forma segura a través de <strong className="text-white/50">Flow.cl</strong>, plataforma de pagos regulada en Chile. WITHMIA no almacena datos de tarjetas ni información financiera sensible; estos son gestionados exclusivamente por Flow.cl conforme a sus propios términos de servicio y políticas de seguridad.
+                    </p>
+                    <p className="mt-3">
+                      El plan Pro incluye 1 usuario. Cada miembro adicional se factura por separado según la tarifa vigente al momento de la contratación.
                     </p>
                     <p className="mt-3">
                       De acuerdo con la Ley N° 19.496 sobre Protección de los Derechos de los Consumidores, los usuarios que actúen como consumidores finales podrán ejercer el derecho de retracto dentro de los 10 días siguientes a la contratación del servicio, siempre que no se haya utilizado el Servicio de manera sustancial durante dicho período.

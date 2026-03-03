@@ -170,19 +170,21 @@ Route::middleware(['web', 'auth'])->prefix('user')->group(function () {
 });
 
 // ============================================================================
-// 5b. SUBSCRIPTION / BILLING (sesión web)
+// 5b. SUBSCRIPTION / BILLING (sesión web) — Flow.cl
 // ============================================================================
 Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::get('/', [SubscriptionController::class, 'index']);
     Route::post('/checkout', [SubscriptionController::class, 'checkout']);
+    Route::post('/checkout-member', [SubscriptionController::class, 'checkoutMember']);
     Route::get('/callback', [SubscriptionController::class, 'callback']);
+    Route::post('/cancel', [SubscriptionController::class, 'cancel']);
     Route::post('/portal', [SubscriptionController::class, 'portal']);
     Route::post('/referral', [SubscriptionController::class, 'applyReferral']);
 });
 
-// dLocal GO Webhook (external callback — throttled)
-Route::post('/webhooks/dlocal', [SubscriptionController::class, 'webhook'])
-    ->middleware('throttle:30,1');
+// Flow.cl Webhook (external callback — throttled)
+Route::post('/webhooks/flow', [SubscriptionController::class, 'webhook'])
+    ->middleware('throttle:60,1');
 
 // ============================================================================
 // 5c. SUPPORT TICKETS — authenticated client (sesión web)

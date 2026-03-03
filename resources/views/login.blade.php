@@ -956,6 +956,12 @@ async function handleCredentialResponse(response) {
             'name': responsePayload.name,
             'picture': responsePayload.picture
         };
+
+        // Forward ?plan= param for post-signup checkout flow
+        const pendingPlan = @json($plan ?? null);
+        if (pendingPlan) {
+            fields['plan'] = pendingPlan;
+        }
         
         for (const [key, value] of Object.entries(fields)) {
             const input = document.createElement('input');

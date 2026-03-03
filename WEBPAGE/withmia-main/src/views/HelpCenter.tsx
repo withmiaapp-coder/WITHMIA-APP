@@ -34,9 +34,9 @@ const videoCategories = [
 const videoTutorials = [
   {
     id: 1,
-    title: "Cómo configurar tu cuenta WITHMIA por primera vez",
-    desc: "Aprende a crear tu workspace, invitar a tu equipo y configurar las opciones básicas para empezar.",
-    duration: "4:32",
+    title: "WITH MIA - START UP CHILE",
+    desc: "Conoce WITHMIA, la plataforma de comunicación omnicanal con IA presentada en Start-Up Chile.",
+    duration: "1:30",
     category: "inicio",
     youtubeId: "kbo-BRcZjiA",
     featured: true,

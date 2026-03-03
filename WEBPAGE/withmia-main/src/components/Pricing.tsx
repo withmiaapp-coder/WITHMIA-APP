@@ -22,17 +22,23 @@ import { Link } from "@/lib/router";
 import { trackCTAClick } from "@/lib/analytics";
 
 /* ═══════════════════════════════════════════════════════════
-   PRICING LOGIC  (mirrors SubscriptionController.php)
-   Free  : $0 / mo
-   Pro   : $18 / mo (monthly)  ·  $15 / mo (annual, -17%)
-   Extra : $10 / mo (monthly)  ·  $8  / mo (annual)
-   1st user included in Pro base price
+   PRICING LOGIC  (CLP – IVA incluido)
+   Free  : $0
+   Pro   : $19.990 / mes  ·  $189.990 / año (pago único)
+   Extra : $9.990 / mes   ·  $95.990 / año
+   1er usuario incluido en el plan base
+   Ref: 1 USD ≈ $950 CLP (feb 2026)
    ═══════════════════════════════════════════════════════════ */
 
 const PRICING = {
-  monthly: { base: 18, perMember: 10 },
-  annual:  { base: 15, perMember: 8 },
+  monthly: { base: 19990, perMember: 9990 },
+  annual:  { base: 189990, perMember: 95990 },
 } as const;
+
+/** Format CLP with thousands separator: 19990 → "19.990" */
+function formatCLP(n: number): string {
+  return n.toLocaleString('es-CL');
+}
 
 /* ─── Free plan features ─── */
 const freePlanFeatures = [
@@ -51,7 +57,7 @@ const freePlanFeatures = [
 const proPlanFeatures = [
   { label: "Todos los canales (WhatsApp, IG, FB, Web, Email)" },
   { label: "Conversaciones y mensajes ilimitados" },
-  { label: "1 miembro incluido · agrega más desde $10/mes" },
+  { label: "1 miembro incluido · agrega más desde $9.990/mes" },
   { label: "GPT-4o, Claude y modelos avanzados" },
   { label: "Base de conocimiento RAG" },
   { label: "Workflows y automatizaciones" },
@@ -79,7 +85,7 @@ const comparisonGroups: ComparisonGroup[] = [
     category: "Equipo",
     icon: Users,
     rows: [
-      { feature: "Miembros",             free: "1",          pro: "Ilimitados (+$10/mes c/u)" },
+      { feature: "Miembros",             free: "1",          pro: "Ilimitados (+$9.990/mes c/u)" },
       { feature: "CRM con pipeline",     free: false,        pro: true },
       { feature: "Analíticas",           free: false,        pro: true },
     ],
@@ -131,7 +137,7 @@ const faqCategories: FaqCategory[] = [
       },
       {
         q: "¿Cómo funciona el cobro por usuarios?",
-        a: "Pro incluye 1 usuario. Cada miembro adicional cuesta $10/mes (mensual) o $8/mes (anual). Agrégalos o quítalos al instante desde tu dashboard — el cobro se ajusta de forma proporcional.",
+        a: "Pro incluye 1 usuario. Cada miembro adicional cuesta $9.990/mes (mensual) o $95.990/año (anual). Agrégalos o quítalos al instante desde tu dashboard — el cobro se ajusta de forma proporcional.",
       },
     ],
   },
@@ -184,7 +190,7 @@ function AnimatedPrice({ value, duration = 500 }: { value: number; duration?: nu
     };
     requestAnimationFrame(tick);
   }, [value, duration]);
-  return <>{display}</>;
+  return <>{formatCLP(display)}</>;
 }
 
 function FaqItem({ q, a, index, totalBefore }: { q: string; a: string; index: number; totalBefore: number }) {
@@ -233,11 +239,12 @@ export const Pricing = () => {
   const annualSavings = useMemo(() => {
     const m = PRICING.monthly.base + Math.max(0, teamSize - 1) * PRICING.monthly.perMember;
     const a = PRICING.annual.base  + Math.max(0, teamSize - 1) * PRICING.annual.perMember;
-    return (m - a) * 12;
+    return m * 12 - a;
   }, [teamSize]);
   const sliderPct = ((teamSize - 1) / 19) * 100;
 
   const hero       = useScrollReveal();
+  const toggle     = useScrollReveal();
   const cards      = useScrollReveal();
 
   const calc       = useScrollReveal();
@@ -279,14 +286,14 @@ export const Pricing = () => {
       </div>
 
       {/* ═══════════ BILLING TOGGLE ═══════════ */}
-      <div className="flex justify-center mb-10 px-4">
+      <div ref={toggle.ref} className={`flex justify-center mb-10 px-4 transition-all duration-700 delay-100 ${toggle.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
         <div className="inline-flex items-center p-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
           <button onClick={() => setIsAnnual(false)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 ${!isAnnual ? "bg-white/10 text-white" : "text-white/35 hover:text-white/50"}`}>
             Mensual
           </button>
           <button onClick={() => setIsAnnual(true)} className={`px-5 py-2.5 rounded-full text-[13px] font-medium transition-all duration-200 flex items-center gap-2 ${isAnnual ? "bg-white/10 text-white" : "text-white/35 hover:text-white/50"}`}>
             Anual
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">−17%</span>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">−20%</span>
           </button>
         </div>
       </div>
@@ -354,20 +361,28 @@ export const Pricing = () => {
 
                 <div className="flex items-end gap-1 mb-1">
                   <span className="text-4xl font-bold text-white tracking-tight tabular-nums">
-                    $<AnimatedPrice value={pricing.base} />
+                    $<AnimatedPrice value={isAnnual ? Math.round(pricing.base / 12) : pricing.base} />
                   </span>
-                  <span className="text-sm text-white/30 mb-1.5">USD/mes</span>
+                  <span className="text-sm text-white/30 mb-1.5">/mes</span>
                 </div>
-                <p className="text-xs text-white/30 mb-1">
-                  +${pricing.perMember}/mes por miembro adicional
-                </p>
-                {isAnnual && (
-                  <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400 mt-1 mb-4">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    Ahorras ${(PRICING.monthly.base - PRICING.annual.base) * 12} USD/año
-                  </p>
+                {isAnnual ? (
+                  <>
+                    <p className="text-xs text-white/30 mb-1">
+                      ${formatCLP(pricing.base)} facturado al año
+                    </p>
+                    <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400 mt-1 mb-4">
+                      <TrendingUp className="w-3.5 h-3.5" />
+                      Ahorras ${formatCLP(PRICING.monthly.base * 12 - PRICING.annual.base)}/año
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-white/30 mb-1">
+                      +${formatCLP(pricing.perMember)}/mes por miembro adicional
+                    </p>
+                    <div className="mb-4" />
+                  </>
                 )}
-                {!isAnnual && <div className="mb-4" />}
 
                 <div className="space-y-3 flex-1">
                   {proPlanFeatures.map((f) => (
@@ -381,8 +396,8 @@ export const Pricing = () => {
 
               <div className="px-7 pb-7">
                 <a
-                  href="https://app.withmia.com"
-                  onClick={() => trackCTAClick('comenzar_pro', 'pricing_pro', 'https://app.withmia.com')}
+                  href={`https://app.withmia.com/register?plan=${isAnnual ? 'pro-annual' : 'pro-monthly'}`}
+                  onClick={() => trackCTAClick('comenzar_pro', 'pricing_pro', `https://app.withmia.com/register?plan=${isAnnual ? 'pro-annual' : 'pro-monthly'}`)}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-amber-500 text-sm font-semibold text-black hover:bg-amber-400 transition-colors"
                 >
                   Comenzar con Pro
@@ -391,6 +406,11 @@ export const Pricing = () => {
               </div>
             </div>
           </div>
+
+          {/* IVA disclaimer */}
+          <p className="text-center text-[11px] text-white/20 mt-6">
+            Precios en pesos chilenos (CLP), IVA incluido. Pagos procesados de forma segura a través de Flow.cl.
+          </p>
 
         </div>
       </div>
@@ -439,28 +459,28 @@ export const Pricing = () => {
             <div className="p-6 md:p-8 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/40">Plan base (1 usuario incluido)</span>
-                <span className="text-white/70 font-medium tabular-nums">${pricing.base}</span>
+                <span className="text-white/70 font-medium tabular-nums">${formatCLP(pricing.base)}</span>
               </div>
               {teamSize > 1 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/40">{teamSize - 1} miembro{teamSize > 2 ? "s" : ""} adicional{teamSize > 2 ? "es" : ""} × ${pricing.perMember}</span>
-                  <span className="text-white/70 font-medium tabular-nums">${(teamSize - 1) * pricing.perMember}</span>
+                  <span className="text-white/40">{teamSize - 1} miembro{teamSize > 2 ? "s" : ""} adicional{teamSize > 2 ? "es" : ""} × ${formatCLP(pricing.perMember)}</span>
+                  <span className="text-white/70 font-medium tabular-nums">${formatCLP((teamSize - 1) * pricing.perMember)}</span>
                 </div>
               )}
               {isAnnual && annualSavings > 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-emerald-400/70">Descuento anual (−17%)</span>
-                  <span className="text-emerald-400 font-medium tabular-nums">−${annualSavings}/año</span>
+                  <span className="text-emerald-400/70">Descuento anual (−20%)</span>
+                  <span className="text-emerald-400 font-medium tabular-nums">−${formatCLP(annualSavings)}/año</span>
                 </div>
               )}
 
               <div className="border-t border-white/[0.06] pt-3 flex items-end justify-between">
-                <span className="text-sm font-semibold text-white/60">Total mensual</span>
+                <span className="text-sm font-semibold text-white/60">Total {isAnnual ? 'anual' : 'mensual'}</span>
                 <div className="text-right">
                   <span className="text-3xl font-bold text-white tabular-nums">
                     $<AnimatedPrice value={totalPrice} />
                   </span>
-                  <span className="text-sm text-white/30 ml-1">USD/mes</span>
+                  <span className="text-sm text-white/30 ml-1">{isAnnual ? '/año' : '/mes'}</span>
                 </div>
               </div>
             </div>
@@ -513,7 +533,7 @@ export const Pricing = () => {
                   <Crown className="w-3 h-3 text-amber-400/70" />
                   <p className="text-[11px] text-amber-400/70 uppercase tracking-wider font-semibold">Pro</p>
                 </div>
-                <p className="text-lg font-bold text-white">$18<span className="text-[11px] font-normal text-white/30 ml-0.5">/mes</span></p>
+                <p className="text-lg font-bold text-white">$19.990<span className="text-[11px] font-normal text-white/30 ml-0.5">/mes</span></p>
               </div>
             </div>
 
@@ -558,22 +578,22 @@ export const Pricing = () => {
             <div className="grid grid-cols-[1.4fr,1fr,1fr] gap-0 border-t border-white/[0.06] bg-white/[0.02]">
               <div className="px-6 py-4" />
               <div className="px-4 py-4 flex items-center justify-center border-l border-white/[0.04]">
-                <Link
-                  to="/registro"
-                  onClick={() => trackCTAClick('comparison_free', 'pricing_comparison', '/registro')}
+                <a
+                  href="https://app.withmia.com/register"
+                  onClick={() => trackCTAClick('comparison_free', 'pricing_comparison', 'https://app.withmia.com/register')}
                   className="text-[12px] font-semibold text-white/40 hover:text-white/60 transition-colors"
                 >
                   Comenzar gratis
-                </Link>
+                </a>
               </div>
               <div className="px-4 py-4 flex items-center justify-center bg-amber-500/[0.03] border-l border-amber-500/[0.06]">
-                <Link
-                  to="/registro"
-                  onClick={() => trackCTAClick('comparison_pro', 'pricing_comparison', '/registro')}
+                <a
+                  href={`https://app.withmia.com/register?plan=${isAnnual ? 'pro-annual' : 'pro-monthly'}`}
+                  onClick={() => trackCTAClick('comparison_pro', 'pricing_comparison', `https://app.withmia.com/register?plan=${isAnnual ? 'pro-annual' : 'pro-monthly'}`)}
                   className="px-5 py-2 rounded-lg bg-amber-500 text-[12px] font-semibold text-black hover:bg-amber-400 transition-colors"
                 >
                   Comenzar con Pro
-                </Link>
+                </a>
               </div>
             </div>
           </div>

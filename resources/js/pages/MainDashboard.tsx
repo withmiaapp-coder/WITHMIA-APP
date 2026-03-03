@@ -51,7 +51,8 @@ import {
   Package,
   GraduationCap,
   CreditCard,
-  Headphones
+  Headphones,
+  Lock
 } from 'lucide-react';
 
 // ====== IMPORTAR UTILIDADES DE SEGURIDAD ======
@@ -778,6 +779,27 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
     return 'dashboard';
   });
   
+  // ====== FORZAR NAVEGACIÓN POR QUERY PARAM ?section= ======
+  // useEffect para capturar el query param después del mount (más robusto que useState initializer)
+  // También limpia la URL para que no quede el ?section= después de navegar
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sectionParam = urlParams.get('section');
+      if (sectionParam && sectionParam !== activeSection) {
+        localStorage.setItem('dashboardActiveSection', sectionParam);
+        setActiveSection(sectionParam);
+      }
+      // Limpiar el query param section de la URL para que no quede stale
+      if (sectionParam) {
+        urlParams.delete('section');
+        const newQuery = urlParams.toString();
+        const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, []); // Solo en mount
+
   // ====== NAVEGACIÓN LIBRE - TODOS LOS USUARIOS PUEDEN ACCEDER A TODAS LAS SECCIONES ======
   // La lógica de permisos se manejará dentro de cada sección individual si es necesario
   const [currentTime] = useState(new Date());
@@ -1135,6 +1157,13 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
     // Actualizacio�n so�ncrona a localStorage ANTES de cualquier render
     if (typeof window !== 'undefined') {
       localStorage.setItem('dashboardActiveSection', itemId);
+      // Limpiar query params (section, conversation) de la URL al navegar
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('section') || url.searchParams.has('conversation')) {
+        url.searchParams.delete('section');
+        url.searchParams.delete('conversation');
+        window.history.replaceState({}, '', url.pathname);
+      }
     }
     
     // Fade out → change section → fade in
@@ -1210,6 +1239,10 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
     }
   ];
 
+  // ====== PLAN STATUS ======
+  // SuperAdmin always has full access regardless of subscription status
+  const isPro = isSuperAdminResolved || planInfo?.status === 'active' || planInfo?.status === 'trialing';
+
   // Sidebar items con permisos - usa isAdmin y hasPermission del hook usePermissions()
   const allSidebarItems = [
     // Dashboard - visible para todos
@@ -1218,7 +1251,8 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Inicio', 
       icon: Sparkles, 
       count: null,
-      permission: 'sidebar.dashboard'
+      permission: 'sidebar.dashboard',
+      proOnly: false
     },
     // Conversaciones - todos
     { 
@@ -1226,31 +1260,8 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Conversaciones', 
       icon: MessageCircle, 
       count: (conversations || []).filter(c => c.status === "open").length,
-      permission: 'sidebar.chats'
-    },
-    // Equipo - todos
-    { 
-      id: 'people', 
-      label: 'Equipo', 
-      icon: Users, 
-      count: teams && teams.length > 0 ? teams.length : null,
-      permission: 'sidebar.teams'
-    },
-    // Integraciones - solo admin por defecto
-    { 
-      id: 'insights', 
-      label: 'Integración', 
-      icon: Lightbulb, 
-      count: integrationsCount,
-      permission: 'sidebar.integrations'
-    },
-    // Conocimientos - solo admin por defecto
-    { 
-      id: 'knowledge', 
-      label: 'Conocimientos', 
-      icon: BookOpen, 
-      count: null,
-      permission: 'sidebar.knowledge'
+      permission: 'sidebar.chats',
+      proOnly: false
     },
     // Entrenamiento - solo admin por defecto
     { 
@@ -1258,23 +1269,53 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Entrenamiento', 
       icon: GraduationCap, 
       count: null,
-      permission: 'sidebar.training'
+      permission: 'sidebar.training',
+      proOnly: false
     },
-    // Calendario - solo admin por defecto
+    // Integraciones - solo admin por defecto
+    { 
+      id: 'insights', 
+      label: 'Integración', 
+      icon: Lightbulb, 
+      count: integrationsCount,
+      permission: 'sidebar.integrations',
+      proOnly: false
+    },
+    // Conocimientos - PRO ONLY
+    { 
+      id: 'knowledge', 
+      label: 'Conocimientos', 
+      icon: BookOpen, 
+      count: null,
+      permission: 'sidebar.knowledge',
+      proOnly: true
+    },
+    // Calendario - PRO ONLY
     { 
       id: 'calendar', 
       label: 'Calendario', 
       icon: Calendar, 
       count: null,
-      permission: 'sidebar.calendar'
+      permission: 'sidebar.calendar',
+      proOnly: true
     },
-    // Productos - solo admin por defecto
+    // Equipo - PRO ONLY
+    { 
+      id: 'people', 
+      label: 'Equipo', 
+      icon: Users, 
+      count: teams && teams.length > 0 ? teams.length : null,
+      permission: 'sidebar.teams',
+      proOnly: true
+    },
+    // Productos - PRO ONLY
     { 
       id: 'reports', 
       label: 'Productos', 
       icon: Package, 
       count: null,
-      permission: 'sidebar.products'
+      permission: 'sidebar.products',
+      proOnly: true
     },
     // Admin Panel - SOLO para super-admin (controlado desde el servidor)
     ...(isSuperAdminResolved ? [{
@@ -1282,15 +1323,18 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       label: 'Admin',
       icon: Shield,
       count: null,
-      permission: 'superadmin'
+      permission: 'superadmin',
+      proOnly: false
     }] : [])
   ];
 
-  // Filtrar items según permisos
-  const sidebarItems = allSidebarItems.filter(item => 
-    item.permission === 'superadmin' ? !!isSuperAdminResolved : 
-    item.permission === 'admin' ? isAdmin : hasPermission(item.permission)
-  );
+  // Filtrar items según permisos (pero mantener los proOnly siempre visibles con lock)
+  const sidebarItems = allSidebarItems.filter(item => {
+    // Pro-only items always visible (shown with lock if free)
+    if (item.proOnly) return true;
+    return item.permission === 'superadmin' ? !!isSuperAdminResolved : 
+      item.permission === 'admin' ? isAdmin : hasPermission(item.permission);
+  });
 
   // Mostrar loading mientras se cargan permisos para evitar flash de contenido admin
   if (!mounted || permissionsLoading) {
@@ -1364,22 +1408,24 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
           <nav className={`p-4 space-y-1 ${sidebarCollapsed ? 'px-2' : ''}`}>
             {sidebarItems.map((item) => {
               const isActive = activeSection === item.id;
+              const isLocked = item.proOnly && !isPro;
               return (
               <button
                 key={item.id}
-                onClick={() => handleNavigation(item.id)}
-                title={sidebarCollapsed ? item.label : ''}
+                onClick={() => isLocked ? handleNavigation('subscription') : handleNavigation(item.id)}
+                title={sidebarCollapsed ? (isLocked ? `${item.label} (Pro)` : item.label) : (isLocked ? 'Disponible en WITHMIA Pro' : '')}
                 className={`group w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-3 rounded-lg transition-colors duration-150 ${
                   !hasTheme ? (
-                    isActive
+                    isActive && !isLocked
                       ? 'bg-neutral-100 shadow-sm border border-neutral-200/60'
                       : 'hover:bg-neutral-50 border border-transparent'
                   ) : ''
-                }`}
+                } ${isLocked ? 'opacity-50' : ''}`}
                 style={hasTheme ? {
-                  background: isActive ? 'var(--theme-sidebar-active-bg)' : undefined,
-                  boxShadow: isActive ? '0 2px 8px -2px var(--theme-glass-shadow)' : undefined,
-                  border: isActive ? '1px solid var(--theme-glass-border)' : '1px solid transparent',
+                  background: isActive && !isLocked ? 'var(--theme-sidebar-active-bg)' : undefined,
+                  boxShadow: isActive && !isLocked ? '0 2px 8px -2px var(--theme-glass-shadow)' : undefined,
+                  border: isActive && !isLocked ? '1px solid var(--theme-glass-border)' : '1px solid transparent',
+                  opacity: isLocked ? 0.5 : undefined,
                 } : undefined}
                 onMouseEnter={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = 'var(--theme-sidebar-hover)'; }}
                 onMouseLeave={(e) => { if (hasTheme && !isActive) e.currentTarget.style.background = ''; }}
@@ -1406,12 +1452,18 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                   {!sidebarCollapsed && (
                     <div className="text-left">
                       <span 
-                        className={`font-semibold text-xs ${!hasTheme ? (isActive ? 'text-neutral-800' : 'text-neutral-600') : ''}`}
-                        style={hasTheme ? { color: isActive ? (isDark ? 'var(--theme-text-primary)' : 'var(--theme-primary-dark)') : 'var(--theme-sidebar-text)' } : undefined}
+                        className={`font-semibold text-xs ${!hasTheme ? (isActive && !isLocked ? 'text-neutral-800' : 'text-neutral-600') : ''}`}
+                        style={hasTheme ? { color: isActive && !isLocked ? (isDark ? 'var(--theme-text-primary)' : 'var(--theme-primary-dark)') : 'var(--theme-sidebar-text)' } : undefined}
                       >
                         {item.label}
                       </span>
-                      {isActive && (
+                      {isLocked && (
+                        <div className="flex items-center gap-1">
+                          <Lock className="w-3 h-3 text-amber-500" />
+                          <span className="text-[10px] font-medium text-amber-500">Pro</span>
+                        </div>
+                      )}
+                      {isActive && !isLocked && (
                         <div 
                           className={`text-xs font-medium ${!hasTheme ? 'text-neutral-400' : ''}`}
                           style={hasTheme ? { color: 'var(--theme-secondary)' } : undefined}
@@ -1421,7 +1473,11 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                   )}
                 </div>
                 
-                {!sidebarCollapsed && (item.count !== null && item.count !== undefined) && (
+                {!sidebarCollapsed && isLocked && (
+                  <Lock className="w-4 h-4 text-amber-500/70" />
+                )}
+                
+                {!sidebarCollapsed && !isLocked && (item.count !== null && item.count !== undefined) && (
                   <div className={`!flex !items-center !space-x-2 !bg-transparent !shadow-none transition-none transform-none`}>
                     <span 
                       className={`!text-xs !px-2 !py-1 !rounded-full !font-medium !min-w-[24px] !h-6 !flex !items-center !justify-center !opacity-100 !transform-none ${
@@ -1479,7 +1535,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 <p 
                   className={`text-xs font-medium ${!hasTheme ? 'text-neutral-400' : ''}`}
                   style={hasTheme ? { color: 'var(--theme-secondary)', opacity: 0.6 } : undefined}
-                >Versión 1.0.1</p>
+                >Versión 1.0.2</p>
                 <button
                   onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   className={`p-1 rounded transition-all duration-200 ${!hasTheme ? 'hover:bg-slate-100 text-neutral-400 hover:text-neutral-600' : ''}`}
@@ -1532,9 +1588,27 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 </div>
               </div>
             ) : activeSection === 'people' ? (
+              !isPro ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-800 mb-2">Equipo</h2>
+                    <p className="text-neutral-500 mb-6">Gestiona tu equipo, roles y permisos. Disponible en WITHMIA Pro.</p>
+                    <button
+                      onClick={() => setActiveSection('subscription')}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200"
+                    >
+                      Actualizar a Pro
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="h-full w-full">
                 <TeamsManagement />
               </div>
+              )
             ) : activeSection === 'insights' ? (
               <IntegrationSection
                 whatsAppStatus={whatsAppStatus}
@@ -1545,8 +1619,27 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 isUpdatingSettings={isUpdatingWhatsAppSettings}
                 onIntegrationChange={() => { checkCalendarIntegrations(); checkChatwootChannels(); }}
                 onNavigateToProducts={() => setActiveSection('reports')}
+                onNavigateToSubscription={() => setActiveSection('subscription')}
+                isPro={isPro}
               />
             ) : activeSection === 'knowledge' ? (
+              !isPro ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-800 mb-2">Base de Conocimiento</h2>
+                    <p className="text-neutral-500 mb-6">Entrena a tu asistente con documentos, sitios web y datos personalizados. Disponible en WITHMIA Pro.</p>
+                    <button
+                      onClick={() => setActiveSection('subscription')}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200"
+                    >
+                      Actualizar a Pro
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
                 <Conocimientos 
                   user={user} 
@@ -1559,6 +1652,7 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                   }}
                 />
               </div>
+              )
             ) : activeSection === 'training' ? (
               <div className="h-full overflow-y-auto p-8 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent hover:scrollbar-thumb-slate-400">
                 <Entrenamiento 
@@ -1582,9 +1676,45 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
                 />
               </div>
             ) : activeSection === 'calendar' ? (
+              !isPro ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-800 mb-2">Calendario</h2>
+                    <p className="text-neutral-500 mb-6">Gestiona tus citas y eventos directamente desde WITHMIA. Disponible en WITHMIA Pro.</p>
+                    <button
+                      onClick={() => setActiveSection('subscription')}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200"
+                    >
+                      Actualizar a Pro
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <CalendarSection user={user} company={company} />
+              )
             ) : activeSection === 'reports' ? (
+              !isPro ? (
+                <div className="h-full flex items-center justify-center p-8">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-neutral-800 mb-2">Productos</h2>
+                    <p className="text-neutral-500 mb-6">Administra tu catálogo de productos y servicios. Disponible en WITHMIA Pro.</p>
+                    <button
+                      onClick={() => setActiveSection('subscription')}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200"
+                    >
+                      Actualizar a Pro
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <ProductsSection user={user} company={company} />
+              )
             ) : activeSection === 'support' ? (
               <SupportTickets />
             ) : activeSection === 'settings' ? (

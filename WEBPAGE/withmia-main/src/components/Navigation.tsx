@@ -7,8 +7,8 @@ const logo = "/logo-withmia.webp";
 
 const menuItems = [
   { label: "Precios", path: "/precios" },
-  { label: "Blog", path: "/blog" },
   { label: "Nosotros", path: "/nosotros" },
+  { label: "Blog", path: "/blog" },
 ];
 
 const productSections = {
@@ -243,16 +243,10 @@ export const Navigation = () => {
                 ))}
               </div>
 
-              {/* Right side — login + CTA */}
+              {/* Right side — single unified CTA */}
               <div className="hidden lg:flex items-center gap-4">
-                <a
-                  href="https://app.withmia.com/login"
-                  className="text-[0.9rem] font-medium text-white/70 hover:text-white transition-colors duration-200"
-                >
-                  Iniciar Sesión
-                </a>
-                <a href="https://app.withmia.com" onClick={() => trackCTAClick("comenzar_ahora_nav", "navigation")} className="px-5 py-2 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold shadow-[0_2px_12px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300">
-                    Comenzar Ahora
+                <a href="https://app.withmia.com" onClick={() => trackCTAClick("entrar_nav", "navigation")} className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold shadow-[0_2px_12px_rgba(245,158,11,0.3)] hover:shadow-[0_4px_20px_rgba(245,158,11,0.4)] hover:-translate-y-px transition-all duration-300">
+                    Entrar a WITHMIA
                 </a>
               </div>
 
@@ -302,18 +296,11 @@ export const Navigation = () => {
                   </a>
                 ))}
                 <a
-                  href="https://app.withmia.com/login"
-                  className="text-white/70 hover:text-white hover:bg-white/[0.06] font-medium transition-all py-3 px-3 text-left w-full rounded-lg block no-underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Iniciar Sesión
-                </a>
-                <a
                   href="https://app.withmia.com"
-                  onClick={() => trackCTAClick("comenzar_ahora_mobile", "navigation")}
+                  onClick={() => { trackCTAClick("entrar_mobile", "navigation"); setMobileMenuOpen(false); }}
                   className="w-full mt-2 block px-5 py-3 rounded-lg bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-semibold text-center shadow-[0_2px_12px_rgba(245,158,11,0.3)] transition-all duration-300"
                 >
-                    Comenzar Ahora
+                    Entrar a WITHMIA
                 </a>
               </div>
             </div>

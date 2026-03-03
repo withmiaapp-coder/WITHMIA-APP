@@ -464,6 +464,14 @@ PROMPT;
         $description = trim($person['description'] ?? '');
 
         if (!empty($extract)) {
+            // Clean Wikipedia artifacts: [1], [2], [], [note 1], etc.
+            $extract = preg_replace('/\[\s*(?:\d+|note\s*\d*|cita\s*requerida)?\s*\]/', '', $extract);
+            // Clean double spaces left behind
+            $extract = preg_replace('/\s{2,}/', ' ', $extract);
+            // Clean space before punctuation
+            $extract = preg_replace('/\s+([.,;:])/', '$1', $extract);
+            $extract = trim($extract);
+
             return $this->truncateToSentences($extract);
         }
 
