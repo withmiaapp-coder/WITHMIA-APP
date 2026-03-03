@@ -92,11 +92,19 @@ rr
 # .rr.yaml - NEEDED for Octane/Roadrunner deployment
 composer.phar
 
-# Webpage (Astro site) - deployed separately
+# Webpage (Astro site) - PRIVATE, NEVER commit to repo
+# This is our private marketing website, deployed separately
+WEBPAGE/
+WEBPAGE/**
 /WEBPAGE/
 
 # Workflow templates
 /workflows/
+
+# Private business documents - NEVER commit
+COMPETITIVE_AUDIT.md
+FINANCIAL_STUDY.md
+*.audit.md
 
 # Backup files
 *.bak
