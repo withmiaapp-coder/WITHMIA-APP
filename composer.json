@@ -1,13 +1,19 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "withmia/app",
+    "name": "withmia/withmia",
     "type": "project",
-    "description": "WITHMIA Bot Platform - Build 20260201163041",
+    "description": "Open-source AI-powered customer service platform for Latin American SMBs",
     "keywords": [
         "laravel",
-        "framework"
+        "whatsapp",
+        "ai",
+        "chatbot",
+        "crm",
+        "rag",
+        "open-source"
     ],
-    "license": "MIT",
+    "license": "AGPL-3.0-or-later",
+    "homepage": "https://github.com/withmia/withmia",
     "require": {
         "php": "^8.3",
         "guzzlehttp/guzzle": "^7.8",

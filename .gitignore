@@ -7,11 +7,14 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/logs/
+/storage/framework/views/
+/storage/framework/cache/
+/storage/framework/sessions/
 /vendor
 .env
-.env.backup
-.env.production
-.env.reverb
+.env.*
+!.env.example
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -84,3 +87,13 @@ commit-railway.sh
 rr
 # .rr.yaml - NEEDED for Octane/Roadrunner deployment
 composer.phar
+
+# Webpage (Astro site) - deployed separately
+/WEBPAGE/
+
+# Workflow templates
+/workflows/
+
+# Backup files
+*.bak
+*.bak2

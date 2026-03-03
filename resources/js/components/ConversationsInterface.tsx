@@ -3010,9 +3010,9 @@ const ConversationsInterface: React.FC<ConversationsInterfaceProps> = ({ current
       });
       
       //  L?GICA BASADA EN LA BD DE CHATWOOT:
-      // - phone_number: SIEMPRE tiene el número correcto (ej: +56984680080)
+      // - phone_number: SIEMPRE tiene el número correcto (ej: +56912345678)
       // - name: Puede ser el nombre real O el número si no tiene nombre
-      // - identifier: Es el WhatsApp ID (ej: 56984680080@s.whatsapp.net)
+      // - identifier: Es el WhatsApp ID (ej: 56912345678@s.whatsapp.net)
       
       const phoneNumber = contact?.phone_number || contact?.name || '';
       const nameValue = contact?.name || '';

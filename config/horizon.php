@@ -35,7 +35,7 @@ return [
     | Comma-separated list of emails allowed to access Horizon dashboard.
     */
 
-    'admin_emails' => env('HORIZON_ADMIN_EMAILS', 'admin@withmia.com,withmia.app@gmail.com'),
+    'admin_emails' => env('HORIZON_ADMIN_EMAILS', 'admin@example.com'),
 
     /*
     |--------------------------------------------------------------------------

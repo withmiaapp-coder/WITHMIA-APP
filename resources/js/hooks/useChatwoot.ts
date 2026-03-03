@@ -120,7 +120,7 @@ export const useConversations = () => {
 
     /**
      * Normalizar teléfono: solo dígitos, últimos 10
-     * Esto maneja: +56975235071, 56975235071, 975235071 -> 6975235071
+     * Esto maneja: +56912345678, 56912345678, 912345678 -> 6912345678
      */
     const normalizePhone = (phone: string | undefined | null): string | null => {
       if (!phone) return null;

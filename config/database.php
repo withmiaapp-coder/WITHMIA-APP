@@ -62,7 +62,7 @@ return [
         'chatwoot' => [
             'driver' => 'pgsql',
             'url' => env('CHATWOOT_DATABASE_URL'),
-            'host' => env('CHATWOOT_DB_HOST', 'postgres.railway.internal'),
+            'host' => env('CHATWOOT_DB_HOST', '127.0.0.1'),
             'port' => env('CHATWOOT_DB_PORT', '5432'),
             'database' => env('CHATWOOT_DB_DATABASE', 'chatwoot'),
             'username' => env('CHATWOOT_DB_USERNAME', 'postgres'),
@@ -77,7 +77,7 @@ return [
         // Evolution API database (compartida en Railway)
         'evolution' => [
             'driver' => 'pgsql',
-            'host' => env('EVOLUTION_DB_HOST', env('DB_HOST', 'postgres.railway.internal')),
+            'host' => env('EVOLUTION_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('EVOLUTION_DB_PORT', env('DB_PORT', '5432')),
             'database' => env('EVOLUTION_DB_DATABASE', 'evolution'),
             'username' => env('EVOLUTION_DB_USERNAME', env('DB_USERNAME', 'postgres')),
