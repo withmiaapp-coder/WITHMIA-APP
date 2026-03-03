@@ -1,4 +1,4 @@
-// SubscriptionPage – v4.0 — WITHMIA 1.0.4 (4-tier pricing + AI usage tracking)
+// SubscriptionPage – v6.0 — WITHMIA 1.0.5 (4-tier + international + Smart Fields recurring)
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CreditCard,
@@ -32,8 +32,11 @@ import {
   TrendingUp,
   Building2,
   Rocket,
+  MapPin,
+  Repeat,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import DLocalSmartFields from '@/components/DLocalSmartFields';
 
 /* ═══════════════════════════════════════════
    TYPES
@@ -181,17 +184,62 @@ interface AiUsageStats {
   overage_price_per_pack: number;
 }
 
+interface LocationInfo {
+  country_code: string;
+  country_name: string;
+  currency: string;
+  currency_name: string;
+  gateway: 'flow' | 'dlocal';
+  is_chile: boolean;
+  smart_fields: boolean;
+  document_required: {
+    type: string;
+    label: string;
+    pattern: string;
+    placeholder: string;
+    mask: string | null;
+  } | null;
+  local_pricing: Record<string, {
+    plan: string;
+    currency: string;
+    monthly: number;
+    annual: number;
+    per_member_monthly: number;
+    per_member_annual: number;
+    overage_per_1000: number;
+    exchange_rate: number;
+  }> | null;
+}
+
+/* Currency symbols for display */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  CLP: '$', BRL: 'R$', MXN: '$', ARS: '$', COP: '$', PEN: 'S/',
+  UYU: '$', PYG: '₲', BOB: 'Bs', CRC: '₡', GTQ: 'Q', HNL: 'L',
+  NIO: 'C$', DOP: 'RD$', USD: 'US$', CAD: 'CA$',
+};
+
+const ZERO_DECIMAL_CURRENCIES = ['CLP', 'PYG', 'COP'];
+
 const FAQ_ITEMS = [
   { q: '¿Puedo cancelar en cualquier momento?', a: 'Sí, puedes cancelar tu suscripción cuando quieras. Mantendrás el acceso hasta el final del período de facturación.' },
-  { q: '¿Qué métodos de pago aceptan?', a: 'Aceptamos tarjetas de crédito y débito (Visa, Mastercard, AMEX) y otros medios de pago locales a través de Flow.cl y dLocal, con soporte para pagos internacionales en toda Latinoamérica.' },
+  { q: '¿Qué métodos de pago aceptan?', a: 'En Chile aceptamos tarjetas de crédito/débito y transferencia bancaria vía Flow.cl. Para pagos internacionales, aceptamos tarjetas de crédito/débito con renovación automática vía dLocal Smart Fields. También PIX (Brasil), OXXO (México) y más métodos locales.' },
   { q: '¿Qué pasa si agrego más miembros al equipo?', a: 'Se cobra un adicional de $10.500/mes (o $107.100/año) por cada miembro extra. El cobro se gestiona automáticamente al invitar desde la sección de equipo.' },
   { q: '¿Qué pasa si excedo mis mensajes IA?', a: 'Puedes continuar enviando mensajes — se cobran como packs extra de 1.000 mensajes a $5.990 CLP cada uno. También puedes comprar packs anticipadamente o subir de plan para obtener más capacidad.' },
   { q: '¿Hay algún contrato o permanencia mínima?', a: 'No, no hay contratos ni permanencia mínima. Pagas mes a mes o año a año, sin compromiso.' },
-  { q: '¿Los precios incluyen IVA?', a: 'Sí. Todos los precios publicados incluyen IVA (19%).' },
+  { q: '¿Los precios incluyen IVA?', a: 'Sí. Todos los precios publicados en CLP incluyen IVA (19%). Para pagos internacionales, los impuestos locales pueden aplicar según tu país.' },
+  { q: '¿Puedo pagar desde otro país?', a: 'Sí. WITHMIA detecta automáticamente tu país y te muestra los precios convertidos a tu moneda local. Si pagas con tarjeta de crédito/débito, tu suscripción se renueva automáticamente cada período. Soportamos más de 15 monedas latinoamericanas.' },
 ];
 
 function formatCLP(n: number): string {
   return n.toLocaleString('es-CL');
+}
+
+function formatLocalPrice(amount: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency + ' ';
+  if (ZERO_DECIMAL_CURRENCIES.includes(currency) || currency === 'PYG') {
+    return `${symbol}${Math.round(amount).toLocaleString('es-CL')}`;
+  }
+  return `${symbol}${amount.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatDate(dateStr: string): string {
@@ -250,6 +298,15 @@ export default function SubscriptionPage() {
   // AI usage state
   const [aiUsage, setAiUsage] = useState<AiUsageStats | null>(null);
 
+  // International location state
+  const [location, setLocation] = useState<LocationInfo | null>(null);
+  const isInternational = location !== null && !location.is_chile;
+  const hasSmartFields = isInternational && location?.smart_fields === true;
+
+  // Smart Fields card form state (for international recurring)
+  const [showSmartFields, setShowSmartFields] = useState(false);
+  const [smartFieldsPlan, setSmartFieldsPlan] = useState('pro');
+
   // Pricing (CLP – IVA incluido)
   const BASE_MONTHLY = 24990;
   const BASE_ANNUAL = 254990;
@@ -294,6 +351,22 @@ export default function SubscriptionPage() {
 
   useEffect(() => { fetchBilling(); fetchTeam(); }, [fetchBilling, fetchTeam]);
 
+  // ── Detect user location (country, currency, gateway) ──
+  const fetchLocation = useCallback(async () => {
+    try {
+      const res = await fetch('/api/subscription/detect-location', {
+        credentials: 'include',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+      });
+      if (res.ok) {
+        const data: LocationInfo = await res.json();
+        setLocation(data);
+      }
+    } catch (err) { console.error('Error detecting location:', err); }
+  }, []);
+
+  useEffect(() => { fetchLocation(); }, [fetchLocation]);
+
   // ── Fetch AI usage ──
   const fetchAiUsage = useCallback(async () => {
     try {
@@ -329,6 +402,15 @@ export default function SubscriptionPage() {
   const handleSubscribe = (planId = 'pro') => handleSubscribeWithCycle(billingCycle, planId);
 
   const handleSubscribeWithCycle = async (cycle: 'monthly' | 'annual', planId = 'pro') => {
+    // International users with Smart Fields → show inline card form
+    if (hasSmartFields && planId !== 'free') {
+      setSmartFieldsPlan(planId);
+      setBillingCycle(cycle);
+      setShowSmartFields(true);
+      return;
+    }
+
+    // Chilean users or fallback → redirect-based checkout
     setSubscribing(true);
     try {
       const res = await fetch('/api/subscription/checkout', {
@@ -494,7 +576,7 @@ export default function SubscriptionPage() {
 
             {!isActive && (
               <button
-                onClick={handleSubscribe}
+                onClick={() => handleSubscribe()}
                 disabled={subscribing}
                 className="px-5 py-2.5 bg-white text-neutral-900 font-semibold text-sm rounded-lg hover:bg-white/90 transition-all shadow-lg disabled:opacity-60 flex items-center gap-2"
               >
@@ -617,6 +699,19 @@ export default function SubscriptionPage() {
             ) : (
               /* Free: 4-tier pricing grid + upgrade CTA */
               <div>
+                {/* International banner */}
+                {isInternational && location && (
+                  <div className={`flex items-center gap-2 mb-4 px-4 py-2.5 rounded-lg text-xs ${!t ? 'bg-blue-50 text-blue-800 border border-blue-200' : ''}`}
+                    style={t ? { background: isDark ? 'rgba(59,130,246,0.12)' : '#eff6ff', color: isDark ? '#93c5fd' : '#1e40af', border: `1px solid ${isDark ? 'rgba(59,130,246,0.25)' : '#bfdbfe'}` } : undefined}
+                  >
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Detectamos que estás en <strong>{location.country_name}</strong>. Los precios se muestran en <strong>{location.currency_name} ({location.currency})</strong> al tipo de cambio actual.
+                      {hasSmartFields ? ' Paga con tarjeta y tu suscripción se renueva automáticamente.' : ' Pagos procesados por dLocal.'}
+                    </span>
+                  </div>
+                )}
+
                 {/* Toggle */}
                 <div className="flex items-center justify-center gap-3 mb-6">
                   <span className={`text-sm font-medium transition-colors ${billingCycle === 'monthly' ? (!t ? 'text-neutral-800' : '') : (!t ? 'text-neutral-400' : '')}`}
@@ -644,6 +739,15 @@ export default function SubscriptionPage() {
                     const monthlyDisplay = billingCycle === 'annual' && plan.priceAnnual > 0
                       ? Math.round(plan.priceAnnual / 12)
                       : plan.priceMonthly;
+
+                    // International pricing — show local currency
+                    const localPricing = isInternational && location?.local_pricing?.[plan.id];
+                    const localMonthly = localPricing
+                      ? (billingCycle === 'annual' && localPricing.annual > 0 ? Math.round(localPricing.annual / 12) : localPricing.monthly)
+                      : null;
+                    const localAnnual = localPricing ? localPricing.annual : null;
+                    const localCur = location?.currency || 'CLP';
+
                     const isCurrentFree = plan.id === 'free';
                     const isHighlighted = plan.highlighted;
 
@@ -687,14 +791,33 @@ export default function SubscriptionPage() {
                         </p>
 
                         <div className="mb-3">
-                          <span className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
-                            {monthlyDisplay === 0 ? '$0' : `$${formatCLP(monthlyDisplay)}`}
-                          </span>
-                          <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
-                          {billingCycle === 'annual' && plan.priceAnnual > 0 && (
-                            <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
-                              ${formatCLP(plan.priceAnnual)} facturado al año
-                            </p>
+                          {isInternational && localMonthly !== null && localMonthly > 0 ? (
+                            <>
+                              <span className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                                {formatLocalPrice(localMonthly, localCur)}
+                              </span>
+                              <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
+                              <p className={`text-[10px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                                ≈ ${formatCLP(monthlyDisplay)} CLP
+                              </p>
+                              {billingCycle === 'annual' && localAnnual !== null && localAnnual > 0 && (
+                                <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                                  {formatLocalPrice(localAnnual, localCur)} facturado al año
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className={`text-2xl font-bold ${!t ? 'text-neutral-800' : ''}`} style={t ? { color: t.textPrimary } : undefined}>
+                                {monthlyDisplay === 0 ? '$0' : `$${formatCLP(monthlyDisplay)}`}
+                              </span>
+                              <span className={`text-sm font-normal ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}> /mes</span>
+                              {billingCycle === 'annual' && plan.priceAnnual > 0 && (
+                                <p className={`text-[11px] ${!t ? 'text-neutral-400' : ''}`} style={t ? { color: t.textMuted } : undefined}>
+                                  ${formatCLP(plan.priceAnnual)} facturado al año
+                                </p>
+                              )}
+                            </>
                           )}
                         </div>
 
@@ -1128,6 +1251,123 @@ export default function SubscriptionPage() {
           </p>
         </div>
       </div>
+
+      {/* ═══════ SMART FIELDS CARD FORM MODAL (International recurring) ═══════ */}
+      {showSmartFields && t && location && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => e.target === e.currentTarget && setShowSmartFields(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden"
+            style={{ background: t.cardBg, border: `1px solid ${t.cardBorder}`, maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            {/* Modal header */}
+            <div className="p-6 pb-0">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${t.accent}20` }}>
+                    <CreditCard className="w-5 h-5" style={{ color: t.accent }} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: t.textPrimary }}>
+                      Suscribirse a {smartFieldsPlan.charAt(0).toUpperCase() + smartFieldsPlan.slice(1)}
+                    </h3>
+                    <p className="text-xs" style={{ color: t.textSec }}>
+                      Pago recurrente con tarjeta · {location.country_name}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowSmartFields(false)}
+                  className="p-2 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ color: t.textMuted }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Recurring badge */}
+              <div className="flex items-center gap-2 mt-3 mb-4 px-3 py-2 rounded-lg text-xs"
+                style={{ background: isDark ? 'rgba(139,92,246,0.12)' : '#f5f3ff', color: isDark ? '#c4b5fd' : '#6d28d9', border: `1px solid ${isDark ? 'rgba(139,92,246,0.25)' : '#ddd6fe'}` }}
+              >
+                <Repeat className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Tu tarjeta se guardará de forma segura para <strong>renovación automática</strong>. Puedes cancelar cuando quieras.
+                </span>
+              </div>
+            </div>
+
+            {/* Card form */}
+            <div className="p-6 pt-2">
+              <DLocalSmartFields
+                plan={smartFieldsPlan}
+                billingCycle={billingCycle}
+                displayAmount={(() => {
+                  const lp = location?.local_pricing?.[smartFieldsPlan];
+                  if (lp) {
+                    const amt = billingCycle === 'annual' ? lp.annual : lp.monthly;
+                    return formatLocalPrice(amt, location.currency);
+                  }
+                  return '$0';
+                })()}
+                currency={location.currency}
+                countryCode={location.country_code}
+                isDark={isDark}
+                themeColors={{
+                  accent: t.accent,
+                  cardBg: t.cardBg,
+                  cardBorder: t.cardBorder,
+                  textPrimary: t.textPrimary,
+                  textSec: t.textSec,
+                  inputBg: t.inputBg,
+                  inputBorder: t.inputBorder,
+                }}
+                onSuccess={(result) => {
+                  setShowSmartFields(false);
+                  if (result.status === 'active') {
+                    showNotif('success', `¡Suscripción activada! Renovación automática ${billingCycle === 'annual' ? 'anual' : 'mensual'}.`);
+                    fetchBilling();
+                  } else if (result.status === 'pending') {
+                    showNotif('success', result.message || 'Pago en proceso. Te notificaremos cuando se confirme.');
+                  }
+                }}
+                onError={(message) => {
+                  showNotif('error', message);
+                }}
+                onLoadingChange={(loading) => setSubscribing(loading)}
+              />
+
+              {/* Option to use redirect checkout instead */}
+              <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${t.cardBorder}` }}>
+                <button
+                  onClick={() => {
+                    setShowSmartFields(false);
+                    setSubscribing(true);
+                    fetch('/api/subscription/checkout', {
+                      method: 'POST', credentials: 'include',
+                      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+                      body: JSON.stringify({ billing_cycle: billingCycle, plan: smartFieldsPlan }),
+                    })
+                      .then(r => r.json())
+                      .then(data => {
+                        if (data.checkout_url) window.location.href = data.checkout_url;
+                        else if (data.message) showNotif('error', data.message);
+                      })
+                      .catch(() => showNotif('error', 'Error al procesar.'))
+                      .finally(() => setSubscribing(false));
+                  }}
+                  className="w-full text-center text-xs py-2 rounded-lg hover:opacity-80 transition-opacity"
+                  style={{ color: t.textMuted }}
+                >
+                  Prefiero pagar con otro método (PIX, OXXO, transferencia, etc.)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══════ NOTIFICATION TOAST ═══════ */}
       {notification && (

@@ -12,6 +12,7 @@ use App\Services\FlowService;
 use App\Services\DLocalService;
 use App\Services\AiUsageService;
 use App\Services\OverageService;
+use App\Services\CurrencyService;
 use App\Services\ChatwootService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,13 +26,15 @@ class SubscriptionController extends Controller
     private DLocalService $dlocal;
     private AiUsageService $aiUsage;
     private OverageService $overage;
+    private CurrencyService $currency;
 
-    public function __construct(FlowService $flow, DLocalService $dlocal, AiUsageService $aiUsage, OverageService $overage)
+    public function __construct(FlowService $flow, DLocalService $dlocal, AiUsageService $aiUsage, OverageService $overage, CurrencyService $currency)
     {
         $this->flow = $flow;
         $this->dlocal = $dlocal;
         $this->aiUsage = $aiUsage;
         $this->overage = $overage;
+        $this->currency = $currency;
     }
 
     /* ═══════════════════════════════════════════
@@ -77,10 +80,27 @@ class SubscriptionController extends Controller
             ]);
         }
 
+        // Detect the actual plan tier from payment_info or plan_name
+        $paymentInfo = $subscription->payment_info ?? [];
+        $planTier = $paymentInfo['plan'] ?? 'pro';
+        if (!in_array($planTier, ['pro', 'business', 'enterprise'])) {
+            // Fallback: detect from plan_name
+            $planName = strtolower($subscription->plan_name ?? '');
+            if (str_contains($planName, 'enterprise')) {
+                $planTier = 'enterprise';
+            } elseif (str_contains($planName, 'business')) {
+                $planTier = 'business';
+            } else {
+                $planTier = 'pro';
+            }
+        }
+
+        $planConfig   = config("billing.plans.{$planTier}", config('billing.plans.pro'));
         $billingCycle = $subscription->billing_cycle ?? 'monthly';
-        $basePrice    = $billingCycle === 'annual' ? config('billing.base_price_annual') : config('billing.base_price_monthly');
+        $basePrice    = $billingCycle === 'annual' ? (int)$planConfig['price_annual'] : (int)$planConfig['price_monthly'];
         $perMember    = $billingCycle === 'annual' ? config('billing.per_member_annual') : config('billing.per_member_monthly');
-        $additional   = max(0, $teamCount - 1);
+        $membersIncluded = $planConfig['members_included'] ?? 1;
+        $additional   = max(0, $teamCount - $membersIncluded);
         $totalPrice   = $basePrice + ($additional * $perMember);
 
         return response()->json([
@@ -93,7 +113,7 @@ class SubscriptionController extends Controller
                 'ends_at'       => $subscription->ends_at,
             ],
             'team_count'  => $teamCount,
-            'plan'        => 'pro',
+            'plan'        => $planTier,
             'currency'    => 'CLP',
             'base_price'  => $basePrice,
             'per_member'  => $perMember,
@@ -128,16 +148,23 @@ class SubscriptionController extends Controller
 
     /* ═══════════════════════════════════════════
        GET /api/subscription/plans
-       Available plans and pricing
+       Available plans and pricing (auto-localized by IP)
        ═══════════════════════════════════════════ */
 
     public function plans(Request $request): JsonResponse
     {
         $plans = config('billing.plans', []);
+
+        // Detect user location for currency conversion
+        $geo = $this->currency->detectCountry($request->ip());
+        $userCurrency = $geo['currency'];
+        $countryCode  = $geo['country_code'];
+        $gateway      = $this->currency->gatewayForCountry($countryCode);
+
         $formatted = [];
 
         foreach ($plans as $key => $plan) {
-            $formatted[] = [
+            $entry = [
                 'id' => $key,
                 'name' => $plan['name'],
                 'price_monthly' => $plan['price_monthly'],
@@ -151,14 +178,39 @@ class SubscriptionController extends Controller
                 'available_models' => $plan['available_models'],
                 'support' => $plan['support'],
             ];
+
+            // Add localized pricing if user is not in Chile
+            if ($userCurrency !== 'CLP') {
+                $localMonthly = $this->currency->convertFromCLP($plan['price_monthly'], $userCurrency);
+                $localAnnual  = $this->currency->convertFromCLP($plan['price_annual'], $userCurrency);
+                $entry['local_price_monthly'] = $localMonthly['amount'];
+                $entry['local_price_annual']  = $localAnnual['amount'];
+                $entry['local_currency']      = $userCurrency;
+            }
+
+            $formatted[] = $entry;
         }
 
-        return response()->json([
+        $response = [
             'plans' => $formatted,
-            'currency' => config('billing.currency', 'CLP'),
+            'currency' => 'CLP',
             'per_member_monthly' => config('billing.per_member_monthly'),
             'per_member_annual' => config('billing.per_member_annual'),
-        ]);
+        ];
+
+        // Add localized member pricing
+        if ($userCurrency !== 'CLP') {
+            $localMemberMonthly = $this->currency->convertFromCLP(config('billing.per_member_monthly'), $userCurrency);
+            $localMemberAnnual  = $this->currency->convertFromCLP(config('billing.per_member_annual'), $userCurrency);
+            $response['local_currency'] = $userCurrency;
+            $response['local_per_member_monthly'] = $localMemberMonthly['amount'];
+            $response['local_per_member_annual']  = $localMemberAnnual['amount'];
+            $response['country'] = $countryCode;
+            $response['gateway'] = $gateway;
+            $response['currency_name'] = $this->currency->currencyName($userCurrency);
+        }
+
+        return response()->json($response);
     }
 
     /* ═══════════════════════════════════════════
@@ -170,6 +222,8 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'billing_cycle' => 'required|in:monthly,annual',
+            'plan'          => 'nullable|in:pro,business,enterprise',
+            'gateway'       => 'nullable|in:flow,dlocal',
         ]);
 
         $user    = Auth::user();
@@ -177,12 +231,6 @@ class SubscriptionController extends Controller
 
         if (!$company) {
             return response()->json(['message' => 'No se encontró la empresa'], 404);
-        }
-
-        // Validate Flow.cl is configured
-        if (!$this->flow->isConfigured()) {
-            Log::error('Flow.cl API not configured – missing FLOW_API_KEY or FLOW_SECRET_KEY env vars');
-            return response()->json(['message' => 'El sistema de pagos no está configurado. Contacta soporte.'], 500);
         }
 
         // Check if already has active subscription
@@ -196,93 +244,283 @@ class SubscriptionController extends Controller
             ], 422);
         }
 
-        $cycle  = $request->billing_cycle;
-        $planId = $cycle === 'annual'
-            ? config('billing.flow.plan_annual_id')
-            : config('billing.flow.plan_monthly_id');
+        $cycle = $request->billing_cycle;
+        $plan  = $request->input('plan', 'pro');
+
+        // Validate plan exists in config
+        $planConfig = config("billing.plans.{$plan}");
+        if (!$planConfig) {
+            return response()->json(['message' => 'Plan no válido'], 422);
+        }
+
+        // ── Auto-detect gateway based on user's country ──
+        // Can be overridden by the frontend sending `gateway` param
+        $geo = $this->currency->detectCountry($request->ip());
+        $countryCode = $geo['country_code'];
+        $userCurrency = $geo['currency'];
+
+        // Gateway selection: Chile → Flow.cl, others → dLocal
+        $gateway = $request->input('gateway') ?? $this->currency->gatewayForCountry($countryCode);
+
+        // Validate the selected gateway is configured
+        if ($gateway === 'flow' && !$this->flow->isConfigured()) {
+            // Fallback to dLocal if Flow not configured
+            $gateway = 'dlocal';
+        }
+        if ($gateway === 'dlocal' && !$this->dlocal->isConfigured()) {
+            // Fallback to Flow if dLocal not configured
+            $gateway = 'flow';
+        }
+
+        // If neither is configured, bail
+        if (($gateway === 'flow' && !$this->flow->isConfigured()) ||
+            ($gateway === 'dlocal' && !$this->dlocal->isConfigured())) {
+            Log::error('No payment gateway configured', ['gateway' => $gateway]);
+            return response()->json(['message' => 'No hay pasarela de pago disponible. Contacta soporte.'], 500);
+        }
+
+        // ── Route to the appropriate gateway ──
+        if ($gateway === 'flow') {
+            return $this->checkoutViaFlow($request, $company, $user, $plan, $cycle, $planConfig);
+        } else {
+            return $this->checkoutViaDlocal($request, $company, $user, $plan, $cycle, $planConfig, $countryCode, $userCurrency);
+        }
+    }
+
+    /**
+     * Process checkout via Flow.cl (Chile only — CLP subscriptions).
+     */
+    private function checkoutViaFlow(Request $request, Company $company, $user, string $plan, string $cycle, array $planConfig): JsonResponse
+    {
+        // Map plan + cycle to the correct Flow.cl subscription plan ID
+        $flowPlanIds = [
+            'pro' => [
+                'monthly' => config('billing.flow.plan_monthly_id'),
+                'annual'  => config('billing.flow.plan_annual_id'),
+            ],
+            'business' => [
+                'monthly' => config('billing.flow.business_monthly_id'),
+                'annual'  => config('billing.flow.business_annual_id'),
+            ],
+            'enterprise' => [
+                'monthly' => config('billing.flow.enterprise_monthly_id'),
+                'annual'  => config('billing.flow.enterprise_annual_id'),
+            ],
+        ];
+
+        $flowPlanId = $flowPlanIds[$plan][$cycle] ?? config('billing.flow.plan_monthly_id');
+
+        $amount = $cycle === 'annual'
+            ? (int) $planConfig['price_annual']
+            : (int) $planConfig['price_monthly'];
+
+        $planLabel  = strtoupper($planConfig['name']);
+        $cycleLabel = $cycle === 'annual' ? 'Anual' : 'Mensual';
 
         try {
-            // 1. Build URLs
             $baseUrl    = config('app.url');
             $returnUrl  = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.return_url'));
-            $confirmUrl = $baseUrl . config('billing.flow.webhook_url');
+            $confirmUrl = $baseUrl . '/api/webhooks/flow-subscription';
 
-            // 2. Calculate price
-            $amount = $cycle === 'annual'
-                ? (int) config('billing.base_price_annual')
-                : (int) config('billing.base_price_monthly');
-
-            // 3. Generate unique commerce order ID
-            $commerceOrder = "withmia-{$company->id}-{$cycle}-" . time();
-
-            // 4. Create payment order in Flow (this returns url + token for redirect)
-            $paymentResult = $this->flow->createPayment(
-                $commerceOrder,
-                'WITHMIA Pro ' . ($cycle === 'annual' ? 'Anual' : 'Mensual'),
-                $amount,
+            // Find or create customer in Flow.cl
+            $flowCustomer = $this->flow->findOrCreateCustomer(
+                $user->name ?? $company->name,
                 $user->email,
-                $confirmUrl,
-                $returnUrl,
-                [
-                    'company_id'    => $company->id,
-                    'plan_id'       => $planId,
-                    'billing_cycle' => $cycle,
-                ]
+                "company-{$company->id}"
             );
 
-            Log::info('Flow createPayment response', ['result' => $paymentResult]);
+            $flowCustomerId = $flowCustomer['customerId'] ?? null;
 
-            // 5. Build redirect URL
+            if (!$flowCustomerId) {
+                Log::error('Flow: could not create/find customer', ['result' => $flowCustomer]);
+                return response()->json(['message' => 'Error al registrar cliente en Flow. Contacta soporte.'], 500);
+            }
+
+            // Create subscription in Flow (recurring billing)
+            $subscriptionResult = $this->flow->createSubscription(
+                $flowPlanId,
+                $flowCustomerId,
+                $returnUrl,
+                $confirmUrl
+            );
+
+            Log::info('Flow createSubscription response', [
+                'plan'            => $plan,
+                'flow_plan_id'    => $flowPlanId,
+                'flow_customer'   => $flowCustomerId,
+                'amount'          => $amount,
+                'result'          => $subscriptionResult,
+            ]);
+
+            // Build redirect URL
             $redirectUrl = null;
-            if (!empty($paymentResult['url']) && !empty($paymentResult['token'])) {
-                $redirectUrl = $paymentResult['url'] . '?token=' . $paymentResult['token'];
+            if (!empty($subscriptionResult['url']) && !empty($subscriptionResult['token'])) {
+                $redirectUrl = $subscriptionResult['url'] . '?token=' . $subscriptionResult['token'];
             }
 
             if (!$redirectUrl) {
-                Log::error('Flow payment: no redirect URL', ['result' => $paymentResult]);
-                return response()->json([
-                    'message' => 'No se obtuvo URL de pago de Flow. Contacta soporte.',
-                ], 500);
+                Log::error('Flow subscription: no redirect URL', ['result' => $subscriptionResult]);
+                return response()->json(['message' => 'No se obtuvo URL de pago de Flow. Contacta soporte.'], 500);
             }
 
-            // 6. Save pending subscription locally
+            // Save pending subscription locally
             Subscription::updateOrCreate(
                 ['company_id' => $company->id],
                 [
-                    'plan_name'            => 'WITHMIA Pro',
+                    'plan_name'            => "WITHMIA {$planLabel}",
                     'price'                => $amount,
                     'billing_cycle'        => $cycle,
-                    'max_agents'           => $company->users()->count(),
-                    'status'               => 'suspended',   // pending payment — webhook will set 'active'
+                    'max_agents'           => $planConfig['max_members'] ?? $company->users()->count(),
+                    'status'               => 'suspended',
                     'starts_at'            => now(),
-                    'flow_subscription_id' => $paymentResult['flowOrder'] ?? null,
-                    'flow_customer_id'     => $commerceOrder,
+                    'flow_subscription_id' => $subscriptionResult['subscriptionId'] ?? null,
+                    'flow_customer_id'     => $flowCustomerId,
                     'payment_info'         => [
-                        'payment_method' => 'flow',
-                        'plan_id'        => $planId,
-                        'cycle'          => $cycle,
-                        'commerce_order' => $commerceOrder,
-                        'flow_token'     => $paymentResult['token'] ?? null,
+                        'payment_method'  => 'flow',
+                        'type'            => 'subscription',
+                        'plan'            => $plan,
+                        'flow_plan_id'    => $flowPlanId,
+                        'cycle'           => $cycle,
+                        'currency'        => 'CLP',
+                        'amount_clp'      => $amount,
+                        'country'         => 'CL',
+                        'flow_customer'   => $flowCustomerId,
+                        'flow_token'      => $subscriptionResult['token'] ?? null,
                     ],
                 ]
             );
 
-            // 7. Return redirect URL for payment
             return response()->json([
                 'checkout_url' => $redirectUrl,
-                'token'        => $paymentResult['token'] ?? null,
+                'token'        => $subscriptionResult['token'] ?? null,
+                'gateway'      => 'flow',
             ]);
 
         } catch (\Exception $e) {
             Log::error('Flow checkout error', [
                 'company_id' => $company->id,
+                'plan'       => $plan,
                 'cycle'      => $cycle,
                 'error'      => $e->getMessage(),
             ]);
 
+            return response()->json(['message' => 'Error al iniciar el pago. Intenta nuevamente.'], 500);
+        }
+    }
+
+    /**
+     * Process checkout via dLocal Go (International — multi-currency).
+     *
+     * Converts CLP pricing to the user's local currency at current exchange rates.
+     * Supports all LATAM currencies + USD as fallback.
+     */
+    private function checkoutViaDlocal(Request $request, Company $company, $user, string $plan, string $cycle, array $planConfig, string $countryCode, string $userCurrency): JsonResponse
+    {
+        $amountCLP = $cycle === 'annual'
+            ? (int) $planConfig['price_annual']
+            : (int) $planConfig['price_monthly'];
+
+        // Convert CLP to user's local currency
+        $converted = $this->currency->convertFromCLP($amountCLP, $userCurrency);
+        $amount   = $converted['amount'];
+        $currency = $converted['currency'];
+        $rate     = $converted['rate'];
+
+        $planLabel  = strtoupper($planConfig['name']);
+        $cycleLabel = $cycle === 'annual' ? 'Anual' : 'Mensual';
+
+        try {
+            $baseUrl = config('app.url');
+            $successUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.dlocal.return_url', config('billing.flow.return_url')));
+            $backUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.dlocal.cancel_url', config('billing.flow.cancel_url')));
+            $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
+
+            $orderId = "withmia-{$plan}-{$company->id}-{$cycle}-" . time();
+
+            $result = $this->dlocal->createPayment(
+                $orderId,
+                "WITHMIA {$planLabel} ({$cycleLabel})",
+                $amount,
+                $currency,
+                $user->email,
+                $successUrl,
+                $backUrl,
+                $notificationUrl,
+                [
+                    'company_id'    => $company->id,
+                    'plan'          => $plan,
+                    'billing_cycle' => $cycle,
+                    'country'       => $countryCode,
+                    'currency'      => $currency,
+                    'amount_clp'    => $amountCLP,
+                    'exchange_rate' => $rate,
+                ]
+            );
+
+            Log::info('dLocal checkout created', [
+                'company_id' => $company->id,
+                'plan'       => $plan,
+                'cycle'      => $cycle,
+                'country'    => $countryCode,
+                'currency'   => $currency,
+                'amount'     => $amount,
+                'amount_clp' => $amountCLP,
+                'rate'       => $rate,
+            ]);
+
+            // Save pending subscription
+            Subscription::updateOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'plan_name'            => "WITHMIA {$planLabel}",
+                    'price'                => $amountCLP, // Always store in CLP for consistency
+                    'billing_cycle'        => $cycle,
+                    'max_agents'           => $planConfig['max_members'] ?? 1,
+                    'status'               => 'suspended',
+                    'starts_at'            => now(),
+                    'dlocal_payment_id'    => $result['id'] ?? null,
+                    'payment_info'         => [
+                        'payment_method'   => 'dlocal',
+                        'type'             => 'payment',
+                        'plan'             => $plan,
+                        'cycle'            => $cycle,
+                        'order_id'         => $orderId,
+                        'country'          => $countryCode,
+                        'currency'         => $currency,
+                        'amount_local'     => $amount,
+                        'amount_clp'       => $amountCLP,
+                        'exchange_rate'    => $rate,
+                    ],
+                ]
+            );
+
+            $checkoutUrl = $result['checkout_url'] ?? null;
+
+            if (!$checkoutUrl) {
+                Log::error('dLocal checkout: no redirect URL', ['result' => $result]);
+                return response()->json(['message' => 'No se obtuvo URL de pago. Contacta soporte.'], 500);
+            }
+
             return response()->json([
-                'message' => 'Error al iniciar el pago. Intenta nuevamente.',
-            ], 500);
+                'checkout_url' => $checkoutUrl,
+                'payment_id'   => $result['id'] ?? null,
+                'gateway'      => 'dlocal',
+                'currency'     => $currency,
+                'amount'       => $amount,
+                'amount_clp'   => $amountCLP,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('dLocal checkout error', [
+                'company_id' => $company->id,
+                'plan'       => $plan,
+                'cycle'      => $cycle,
+                'country'    => $countryCode,
+                'currency'   => $currency,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Error al iniciar el pago internacional.'], 500);
         }
     }
 
@@ -621,120 +859,15 @@ class SubscriptionController extends Controller
 
     /* ═══════════════════════════════════════════
        POST /api/subscription/checkout-dlocal
-       Create dLocal payment → redirect URL (backup gateway)
+       Explicit dLocal checkout (kept for backward compatibility)
+       Now redirects to the unified checkout with gateway=dlocal
        ═══════════════════════════════════════════ */
 
     public function checkoutDlocal(Request $request): JsonResponse
     {
-        $request->validate([
-            'billing_cycle' => 'required|in:monthly,annual',
-            'plan'          => 'nullable|in:pro,business,enterprise',
-        ]);
-
-        $user    = Auth::user();
-        $company = Company::where('slug', $user->company_slug)->first();
-
-        if (!$company) {
-            return response()->json(['message' => 'No se encontró la empresa'], 404);
-        }
-
-        if (!$this->dlocal->isConfigured()) {
-            return response()->json(['message' => 'dLocal no está configurado. Contacta soporte.'], 500);
-        }
-
-        // Check existing active subscription
-        $existing = Subscription::where('company_id', $company->id)
-            ->where('status', 'active')
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'message' => 'Ya tienes una suscripción activa.',
-            ], 422);
-        }
-
-        $cycle = $request->billing_cycle;
-        $plan  = $request->input('plan', 'pro');
-
-        $planConfig = config("billing.plans.{$plan}");
-        if (!$planConfig) {
-            return response()->json(['message' => 'Plan no válido'], 422);
-        }
-
-        $amount = $cycle === 'annual'
-            ? (float) $planConfig['price_annual']
-            : (float) $planConfig['price_monthly'];
-
-        $planLabel = strtoupper($planConfig['name']);
-        $cycleLabel = $cycle === 'annual' ? 'Anual' : 'Mensual';
-
-        try {
-            $baseUrl = config('app.url');
-            $successUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.return_url'));
-            $backUrl = $baseUrl . str_replace('{slug}', $company->slug, config('billing.flow.cancel_url'));
-            $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
-
-            $orderId = "withmia-{$plan}-{$company->id}-{$cycle}-" . time();
-
-            $result = $this->dlocal->createPayment(
-                $orderId,
-                "WITHMIA {$planLabel} ({$cycleLabel})",
-                $amount,
-                config('billing.currency', 'CLP'),
-                $user->email,
-                $successUrl,
-                $backUrl,
-                $notificationUrl,
-                [
-                    'company_id'    => $company->id,
-                    'plan'          => $plan,
-                    'billing_cycle' => $cycle,
-                ]
-            );
-
-            // Save pending subscription
-            Subscription::updateOrCreate(
-                ['company_id' => $company->id],
-                [
-                    'plan_name'            => "WITHMIA {$planLabel}",
-                    'price'                => $amount,
-                    'billing_cycle'        => $cycle,
-                    'max_agents'           => $planConfig['max_members'] ?? 1,
-                    'status'               => 'suspended',
-                    'starts_at'            => now(),
-                    'dlocal_payment_id'    => $result['id'] ?? null,
-                    'payment_info'         => [
-                        'payment_method' => 'dlocal',
-                        'plan'           => $plan,
-                        'cycle'          => $cycle,
-                        'order_id'       => $orderId,
-                    ],
-                ]
-            );
-
-            $checkoutUrl = $result['checkout_url'] ?? null;
-
-            if (!$checkoutUrl) {
-                Log::error('dLocal checkout: no redirect URL', ['result' => $result]);
-                return response()->json(['message' => 'No se obtuvo URL de pago. Contacta soporte.'], 500);
-            }
-
-            return response()->json([
-                'checkout_url' => $checkoutUrl,
-                'payment_id'   => $result['id'] ?? null,
-                'gateway'      => 'dlocal',
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('dLocal checkout error', [
-                'company_id' => $company->id,
-                'plan'       => $plan,
-                'cycle'      => $cycle,
-                'error'      => $e->getMessage(),
-            ]);
-
-            return response()->json(['message' => 'Error al iniciar el pago con dLocal.'], 500);
-        }
+        // Merge gateway=dlocal and delegate to unified checkout
+        $request->merge(['gateway' => 'dlocal']);
+        return $this->checkout($request);
     }
 
     /* ═══════════════════════════════════════════
@@ -795,20 +928,41 @@ class SubscriptionController extends Controller
         $billingCycle = $subscription->billing_cycle ?? 'monthly';
 
         if ($internalStatus === 'active') {
-            $subscription->update([
+            // Extract card_id if present (from Smart Fields payments)
+            $cardId = $data['card']['card_id'] ?? ($metadata['dlocal_card_id'] ?? null);
+            $existingPaymentInfo = $subscription->payment_info ?? [];
+
+            // Preserve existing card_id if we already have one
+            if (!$cardId && !empty($existingPaymentInfo['dlocal_card_id'])) {
+                $cardId = $existingPaymentInfo['dlocal_card_id'];
+            }
+
+            $updateData = [
                 'status'            => 'active',
                 'dlocal_payment_id' => $paymentId,
                 'starts_at'         => now(),
                 'ends_at'           => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
-                'payment_info'      => array_merge($subscription->payment_info ?? [], [
+                'payment_info'      => array_merge($existingPaymentInfo, [
                     'last_payment_date' => now()->toISOString(),
                     'dlocal_status'     => $status,
                     'dlocal_payment_id' => $paymentId,
+                    'renewal_attempts'  => 0, // Reset on successful payment
                 ]),
-            ]);
+            ];
+
+            // Save card_id for recurring if available
+            if ($cardId) {
+                $updateData['payment_info']['dlocal_card_id'] = $cardId;
+                $updateData['payment_info']['recurring'] = true;
+            }
+
+            $subscription->update($updateData);
+
             Log::info('dLocal payment confirmed — subscription activated', [
                 'subscription_id' => $subscription->id,
                 'payment_id'      => $paymentId,
+                'has_card_id'     => !empty($cardId),
+                'recurring'       => !empty($cardId),
             ]);
         } elseif ($internalStatus === 'cancelled') {
             $subscription->update([
@@ -988,11 +1142,14 @@ class SubscriptionController extends Controller
 
     /* ═══════════════════════════════════════════
        GET /api/subscription/gateways
-       Available payment gateways
+       Available payment gateways (auto-detected by IP)
        ═══════════════════════════════════════════ */
 
     public function gateways(Request $request): JsonResponse
     {
+        $geo = $this->currency->detectCountry($request->ip());
+        $recommended = $this->currency->gatewayForCountry($geo['country_code']);
+
         return response()->json([
             'gateways' => [
                 [
@@ -1007,12 +1164,276 @@ class SubscriptionController extends Controller
                     'id'          => 'dlocal',
                     'name'        => 'dLocal',
                     'available'   => $this->dlocal->isConfigured(),
-                    'currencies'  => ['CLP', 'BRL', 'MXN', 'ARS', 'COP', 'PEN', 'UYU', 'USD'],
-                    'countries'   => ['CL', 'BR', 'MX', 'AR', 'CO', 'PE', 'UY', 'US'],
+                    'currencies'  => config('billing.dlocal.supported_currencies', ['CLP', 'BRL', 'MXN', 'ARS', 'COP', 'PEN', 'UYU', 'USD']),
+                    'countries'   => ['CL', 'BR', 'MX', 'AR', 'CO', 'PE', 'UY', 'PY', 'BO', 'CR', 'GT', 'HN', 'NI', 'DO', 'US'],
                     'description' => 'Pagos internacionales LATAM (tarjeta, transferencia, PIX, OXXO, etc.)',
                 ],
             ],
-            'default' => $this->flow->isConfigured() ? 'flow' : ($this->dlocal->isConfigured() ? 'dlocal' : null),
+            'recommended' => $recommended,
+            'detected'    => [
+                'country_code'  => $geo['country_code'],
+                'country_name'  => $geo['country_name'],
+                'currency'      => $geo['currency'],
+                'currency_name' => $this->currency->currencyName($geo['currency']),
+                'gateway'       => $recommended,
+            ],
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/smart-fields-config
+       Returns dLocal Smart Fields SDK config for frontend
+       ═══════════════════════════════════════════ */
+
+    public function smartFieldsConfig(Request $request): JsonResponse
+    {
+        if (!$this->dlocal->isSmartFieldsConfigured()) {
+            return response()->json([
+                'available' => false,
+                'message'   => 'Smart Fields no está configurado.',
+            ]);
+        }
+
+        // Detect country from IP for correct SDK initialization
+        $geo = $this->currency->detectCountry($request->ip());
+        $config = $this->dlocal->getSmartFieldsConfig($geo['country_code']);
+
+        return response()->json([
+            'available' => true,
+            ...$config,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════
+       POST /api/subscription/checkout-smart-fields
+       Process payment with dLocal Smart Fields card token.
+       Enables recurring billing by saving the card_id.
+       ═══════════════════════════════════════════ */
+
+    public function checkoutSmartFields(Request $request): JsonResponse
+    {
+        $request->validate([
+            'card_token'    => 'required|string',
+            'billing_cycle' => 'required|in:monthly,annual',
+            'plan'          => 'nullable|in:pro,business,enterprise',
+            'payer_name'    => 'required|string|max:255',
+            'payer_document' => 'nullable|string|max:30',
+        ]);
+
+        if (!$this->dlocal->isSmartFieldsConfigured()) {
+            return response()->json(['message' => 'Smart Fields no está disponible.'], 422);
+        }
+
+        $user    = Auth::user();
+        $company = Company::where('slug', $user->company_slug)->first();
+
+        if (!$company) {
+            return response()->json(['message' => 'No se encontró la empresa'], 404);
+        }
+
+        // Check if already has active subscription
+        $existing = Subscription::where('company_id', $company->id)
+            ->where('status', 'active')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'Ya tienes una suscripción activa. Cancélala primero para cambiar de plan.',
+            ], 422);
+        }
+
+        $cycle = $request->billing_cycle;
+        $plan  = $request->input('plan', 'pro');
+
+        $planConfig = config("billing.plans.{$plan}");
+        if (!$planConfig) {
+            return response()->json(['message' => 'Plan no válido'], 422);
+        }
+
+        // ── Detect country & convert currency ──
+        $geo = $this->currency->detectCountry($request->ip());
+        $countryCode  = $geo['country_code'];
+        $userCurrency = $geo['currency'];
+
+        $amountCLP = $cycle === 'annual'
+            ? (int) $planConfig['price_annual']
+            : (int) $planConfig['price_monthly'];
+
+        $converted = $this->currency->convertFromCLP($amountCLP, $userCurrency);
+        $amount   = $converted['amount'];
+        $currency = $converted['currency'];
+        $rate     = $converted['rate'];
+
+        $planLabel  = strtoupper($planConfig['name']);
+        $cycleLabel = $cycle === 'annual' ? 'Anual' : 'Mensual';
+
+        try {
+            $baseUrl = config('app.url');
+            $notificationUrl = $baseUrl . '/api/webhooks/dlocal';
+            $orderId = "withmia-sf-{$plan}-{$company->id}-{$cycle}-" . time();
+
+            // Build payer info with document
+            $docInfo = DLocalService::COUNTRY_DOCUMENT_TYPES[$countryCode] ?? null;
+            $payer = [
+                'name'          => $request->payer_name,
+                'email'         => $user->email,
+                'document'      => $request->payer_document ?? null,
+                'document_type' => $docInfo['type'] ?? null,
+            ];
+
+            // ── Charge the card via Smart Fields token ──
+            $result = $this->dlocal->createPaymentWithToken(
+                $request->card_token,
+                $orderId,
+                $amount,
+                $currency,
+                $countryCode,
+                $payer,
+                "WITHMIA {$planLabel} ({$cycleLabel})",
+                $notificationUrl,
+                [
+                    'company_id'    => $company->id,
+                    'plan'          => $plan,
+                    'billing_cycle' => $cycle,
+                    'country'       => $countryCode,
+                    'currency'      => $currency,
+                    'amount_clp'    => $amountCLP,
+                    'exchange_rate' => $rate,
+                    'type'          => 'smart_fields_subscription',
+                ]
+            );
+
+            Log::info('dLocal Smart Fields payment created', [
+                'company_id' => $company->id,
+                'plan'       => $plan,
+                'cycle'      => $cycle,
+                'country'    => $countryCode,
+                'currency'   => $currency,
+                'amount'     => $amount,
+                'payment_id' => $result['id'] ?? null,
+                'status'     => $result['status'] ?? null,
+            ]);
+
+            $paymentStatus = strtoupper($result['status'] ?? 'PENDING');
+            $cardId = $result['card']['card_id'] ?? null;
+            $internalStatus = $this->dlocal->mapStatus($paymentStatus);
+
+            // Determine subscription dates
+            $startsAt = now();
+            $endsAt = $cycle === 'annual' ? now()->addYear() : now()->addMonth();
+
+            // Save subscription with card_id for recurring
+            Subscription::updateOrCreate(
+                ['company_id' => $company->id],
+                [
+                    'plan_name'            => "WITHMIA {$planLabel}",
+                    'price'                => $amountCLP, // Always CLP internally
+                    'billing_cycle'        => $cycle,
+                    'max_agents'           => $planConfig['max_members'] ?? 1,
+                    'status'               => $internalStatus === 'active' ? 'active' : 'suspended',
+                    'starts_at'            => $internalStatus === 'active' ? $startsAt : null,
+                    'ends_at'              => $internalStatus === 'active' ? $endsAt : null,
+                    'dlocal_payment_id'    => $result['id'] ?? null,
+                    'payment_info'         => [
+                        'payment_method'   => 'dlocal',
+                        'type'             => 'smart_fields_subscription',
+                        'recurring'        => true,
+                        'plan'             => $plan,
+                        'cycle'            => $cycle,
+                        'order_id'         => $orderId,
+                        'country'          => $countryCode,
+                        'currency'         => $currency,
+                        'amount_local'     => $amount,
+                        'amount_clp'       => $amountCLP,
+                        'exchange_rate'    => $rate,
+                        'dlocal_card_id'   => $cardId,
+                        'dlocal_status'    => $paymentStatus,
+                        'payer_name'       => $request->payer_name,
+                        'payer_email'      => $user->email,
+                        'last_payment_date' => now()->toISOString(),
+                        'renewal_attempts' => 0,
+                    ],
+                ]
+            );
+
+            // If payment was immediately approved
+            if ($internalStatus === 'active') {
+                return response()->json([
+                    'success'    => true,
+                    'status'     => 'active',
+                    'message'    => 'Suscripción activada exitosamente con renovación automática.',
+                    'gateway'    => 'dlocal_smart_fields',
+                    'recurring'  => true,
+                    'payment_id' => $result['id'] ?? null,
+                    'currency'   => $currency,
+                    'amount'     => $amount,
+                    'next_renewal' => $endsAt->toDateString(),
+                ]);
+            }
+
+            // If pending (3DS or async processing)
+            if (!empty($result['three_dsecure']['redirect_url'])) {
+                return response()->json([
+                    'success'      => true,
+                    'status'       => 'pending_3ds',
+                    'redirect_url' => $result['three_dsecure']['redirect_url'],
+                    'message'      => 'Redirigiendo para verificación 3D Secure...',
+                    'payment_id'   => $result['id'] ?? null,
+                ]);
+            }
+
+            return response()->json([
+                'success'    => true,
+                'status'     => 'pending',
+                'message'    => 'Pago en proceso. Te notificaremos cuando se confirme.',
+                'payment_id' => $result['id'] ?? null,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('dLocal Smart Fields checkout error', [
+                'company_id' => $company->id,
+                'plan'       => $plan,
+                'cycle'      => $cycle,
+                'country'    => $countryCode,
+                'error'      => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar el pago con tarjeta. Verifica los datos e intenta nuevamente.',
+            ], 500);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       GET /api/subscription/detect-location
+       Detect user country from IP → currency, gateway
+       ═══════════════════════════════════════════ */
+
+    public function detectLocation(Request $request): JsonResponse
+    {
+        $geo = $this->currency->detectCountry($request->ip());
+        $gateway = $this->currency->gatewayForCountry($geo['country_code']);
+
+        // Get localized pricing for all plans
+        $localPricing = null;
+        if ($geo['currency'] !== 'CLP') {
+            $localPricing = $this->currency->getAllPlanPricings($geo['currency']);
+        }
+
+        // Check if Smart Fields is available for recurring payments
+        $smartFieldsAvailable = $this->dlocal->isSmartFieldsConfigured() && $gateway === 'dlocal';
+
+        return response()->json([
+            'country_code'  => $geo['country_code'],
+            'country_name'  => $geo['country_name'],
+            'currency'      => $geo['currency'],
+            'currency_name' => $this->currency->currencyName($geo['currency']),
+            'gateway'       => $gateway,
+            'is_chile'      => $geo['country_code'] === 'CL',
+            'local_pricing' => $localPricing,
+            'smart_fields'  => $smartFieldsAvailable,
+            'document_required' => DLocalService::COUNTRY_DOCUMENT_TYPES[$geo['country_code']] ?? null,
         ]);
     }
 
@@ -1121,5 +1542,136 @@ class SubscriptionController extends Controller
         }
 
         return response()->json(['received' => true], 200);
+    }
+
+    /* ═══════════════════════════════════════════
+       POST /api/webhooks/flow-subscription
+       Handle Flow.cl SUBSCRIPTION confirmation webhook.
+       This is called by Flow when:
+        - A new subscription is created (first payment)
+        - A recurring subscription payment is processed
+        - A subscription is cancelled or suspended
+       ═══════════════════════════════════════════ */
+
+    public function webhookSubscription(Request $request): JsonResponse
+    {
+        $token = $request->input('token');
+
+        if (!$token) {
+            Log::warning('Flow subscription webhook: no token received', ['all' => $request->all()]);
+            return response()->json(['received' => true], 200);
+        }
+
+        try {
+            // Flow sends a token — we query the payment status to get details
+            $data = $this->flow->getPaymentStatus($token);
+
+            Log::info('Flow subscription webhook received', ['data' => $data]);
+
+            $status        = (int) ($data['status'] ?? 0);
+            $flowOrder     = $data['flowOrder'] ?? null;
+            $amount        = $data['amount'] ?? null;
+            $payerEmail    = $data['payer'] ?? null;
+
+            // Try to find the subscription by flow_customer_id (Flow's customer ID)
+            // or by flow_subscription_id
+            $subscription = null;
+
+            // First: try by subscriptionId from response
+            $subscriptionId = $data['subscriptionId'] ?? null;
+            if ($subscriptionId) {
+                $subscription = Subscription::where('flow_subscription_id', $subscriptionId)->first();
+            }
+
+            // Fallback: try by flow_customer_id (the Flow customer ID we stored)
+            if (!$subscription) {
+                $customerId = $data['customerId'] ?? null;
+                if ($customerId) {
+                    $subscription = Subscription::where('flow_customer_id', $customerId)
+                        ->latest()
+                        ->first();
+                }
+            }
+
+            // Fallback: find suspended subscription for the payer's email
+            if (!$subscription && $payerEmail) {
+                $user = User::where('email', $payerEmail)->first();
+                if ($user) {
+                    $company = Company::where('slug', $user->company_slug)->first();
+                    if ($company) {
+                        $subscription = Subscription::where('company_id', $company->id)
+                            ->whereIn('status', ['suspended', 'active'])
+                            ->latest()
+                            ->first();
+                    }
+                }
+            }
+
+            if (!$subscription) {
+                Log::warning('Flow subscription webhook: subscription not found', [
+                    'token'          => $token,
+                    'subscriptionId' => $subscriptionId,
+                    'flowOrder'      => $flowOrder,
+                ]);
+                return response()->json(['received' => true], 200);
+            }
+
+            $billingCycle = $subscription->billing_cycle ?? 'monthly';
+
+            if ($status === 2) {
+                // Payment successful
+                $isFirstPayment = $subscription->status === 'suspended';
+
+                $subscription->update([
+                    'status'               => 'active',
+                    'flow_subscription_id' => $subscriptionId ?? $subscription->flow_subscription_id,
+                    'starts_at'            => $isFirstPayment ? now() : $subscription->starts_at,
+                    'ends_at'              => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
+                    'payment_info'         => array_merge($subscription->payment_info ?? [], [
+                        'last_payment_date'     => now()->toISOString(),
+                        'flow_status'           => $status,
+                        'flow_order'            => $flowOrder,
+                        'flow_subscription_id'  => $subscriptionId,
+                        'amount_paid'           => $amount,
+                        'payments_count'        => ($subscription->payment_info['payments_count'] ?? 0) + 1,
+                    ]),
+                ]);
+
+                Log::info('Flow subscription payment confirmed', [
+                    'subscription_id' => $subscription->id,
+                    'is_first'        => $isFirstPayment,
+                    'flow_order'      => $flowOrder,
+                    'amount'          => $amount,
+                    'next_ends_at'    => $subscription->fresh()->ends_at,
+                ]);
+
+            } elseif ($status === 3 || $status === 4) {
+                // Payment rejected or cancelled
+                $wasActive = $subscription->status === 'active';
+
+                $subscription->update([
+                    'status'       => $wasActive ? 'past_due' : 'cancelled',
+                    'payment_info' => array_merge($subscription->payment_info ?? [], [
+                        'last_failed_date' => now()->toISOString(),
+                        'flow_status'      => $status,
+                    ]),
+                ]);
+
+                Log::warning('Flow subscription payment failed/cancelled', [
+                    'subscription_id' => $subscription->id,
+                    'was_active'      => $wasActive,
+                    'status'          => $status,
+                ]);
+            }
+
+            return response()->json(['received' => true], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Flow subscription webhook error', [
+                'token' => $token,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['received' => true], 200);
+        }
     }
 }

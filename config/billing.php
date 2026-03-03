@@ -118,10 +118,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Flow.cl
+    | Flow.cl (Chile only)
     |--------------------------------------------------------------------------
     |
     | Plan IDs deben coincidir con los creados en dashboard.flow.cl
+    | Flow.cl only processes CLP — used exclusively for Chilean customers.
     |
     */
 
@@ -151,6 +152,77 @@ return [
         'return_url'  => env('FLOW_RETURN_URL', '/dashboard/{slug}?section=subscription&status=success'),
         'cancel_url'  => env('FLOW_CANCEL_URL', '/dashboard/{slug}?section=subscription&status=cancelled'),
         'webhook_url' => env('FLOW_WEBHOOK_URL', '/api/webhooks/flow'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | dLocal Go (International — all LATAM currencies)
+    |--------------------------------------------------------------------------
+    |
+    | dLocal handles payments for ALL countries except Chile (which uses Flow).
+    | Prices are converted from CLP to local currency at checkout time.
+    | Supports: BRL, MXN, ARS, COP, PEN, UYU, PYG, BOB, CRC, USD, etc.
+    |
+    | Gateway selection is automatic:
+    |   Chile → Flow.cl (subscription API, lower fees ~2.95%)
+    |   Other → dLocal Go (payment API, converted currency, fees ~3.5-5%)
+    |
+    */
+
+    'dlocal' => [
+        // ── dLocalGo (Simple Checkout — redirect-based) ──
+        'api_key'    => env('DLOCAL_API_KEY'),
+        'secret_key' => env('DLOCAL_SECRET_KEY'),
+        'api_url'    => env('DLOCAL_API_URL', 'https://api.dlocalgo.com'),
+
+        // ── dLocal Full API (Smart Fields + Recurring) ──
+        // These credentials are from the dLocal merchant dashboard (not dLocalGo).
+        // Required for card tokenization via Smart Fields and recurring charges.
+        'x_login'              => env('DLOCAL_X_LOGIN'),
+        'x_trans_key'          => env('DLOCAL_X_TRANS_KEY'),
+        'secret_key_full'      => env('DLOCAL_SECRET_KEY_FULL'),
+        'smart_fields_api_key' => env('DLOCAL_SMART_FIELDS_API_KEY'),
+        'api_url_full'         => env('DLOCAL_API_URL_FULL', 'https://api.dlocal.com'),
+        'sandbox'              => (bool) env('DLOCAL_SANDBOX', false),
+
+        // Webhook URL for dLocal payment notifications
+        'webhook_url' => env('DLOCAL_WEBHOOK_URL', '/api/webhooks/dlocal'),
+
+        // Return URLs
+        'return_url' => env('DLOCAL_RETURN_URL', '/dashboard/{slug}?section=subscription&status=success'),
+        'cancel_url' => env('DLOCAL_CANCEL_URL', '/dashboard/{slug}?section=subscription&status=cancelled'),
+
+        // Supported currencies for dLocal
+        'supported_currencies' => [
+            'BRL', 'MXN', 'ARS', 'COP', 'PEN', 'UYU', 'PYG', 'BOB',
+            'CRC', 'GTQ', 'HNL', 'NIO', 'DOP', 'USD', 'CAD', 'CLP',
+        ],
+
+        // Recurring renewal settings
+        'renewal' => [
+            'enabled'          => (bool) env('DLOCAL_RENEWAL_ENABLED', true),
+            'retry_days'       => [0, 1, 3, 7],     // Days to retry after failed charge
+            'grace_period_days' => 3,                 // Days after expiry before suspension
+            'notify_before_days' => 3,                // Email warning X days before renewal
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gateway selection logic
+    |--------------------------------------------------------------------------
+    |
+    | Automatic gateway selection based on country:
+    | - Chile (CL) → Flow.cl (better rates, local subscription support)
+    | - Any other LATAM country → dLocal Go (multi-currency support)
+    | - Rest of world → dLocal Go with USD
+    |
+    */
+
+    'gateway_rules' => [
+        'default' => 'dlocal',        // Default gateway for unknown countries
+        'chile_gateway' => 'flow',     // Chile always uses Flow.cl
+        'fallback_currency' => 'USD',  // If country currency not supported, use USD
     ],
 
 ];

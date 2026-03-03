@@ -177,9 +177,12 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::get('/usage', [SubscriptionController::class, 'usage']);
     Route::get('/plans', [SubscriptionController::class, 'plans']);
     Route::get('/gateways', [SubscriptionController::class, 'gateways']);
+    Route::get('/detect-location', [SubscriptionController::class, 'detectLocation']);
+    Route::get('/smart-fields-config', [SubscriptionController::class, 'smartFieldsConfig']);
     Route::get('/overage', [SubscriptionController::class, 'overageStats']);
     Route::post('/checkout', [SubscriptionController::class, 'checkout']);
     Route::post('/checkout-dlocal', [SubscriptionController::class, 'checkoutDlocal']);
+    Route::post('/checkout-smart-fields', [SubscriptionController::class, 'checkoutSmartFields']);
     Route::post('/checkout-member', [SubscriptionController::class, 'checkoutMember']);
     Route::post('/purchase-overage', [SubscriptionController::class, 'purchaseOverage']);
     Route::get('/callback', [SubscriptionController::class, 'callback']);
@@ -188,8 +191,12 @@ Route::middleware(['web', 'auth'])->prefix('subscription')->group(function () {
     Route::post('/referral', [SubscriptionController::class, 'applyReferral']);
 });
 
-// Flow.cl Webhook (external callback — throttled)
+// Flow.cl Webhook — one-time payments (member addon, overage)
 Route::post('/webhooks/flow', [SubscriptionController::class, 'webhook'])
+    ->middleware('throttle:60,1');
+
+// Flow.cl Webhook — recurring subscriptions
+Route::post('/webhooks/flow-subscription', [SubscriptionController::class, 'webhookSubscription'])
     ->middleware('throttle:60,1');
 
 // dLocal Webhook (external callback — throttled)
