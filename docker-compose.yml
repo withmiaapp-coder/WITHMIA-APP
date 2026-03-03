@@ -2,7 +2,7 @@
 # Withmia - Self-Hosting Docker Compose
 # =============================================================================
 # Usage: docker compose up -d
-# Docs:  https://github.com/withmiaapp-coder/withmia/wiki/Self-Hosting
+# Docs:  https://github.com/withmiaapp-coder/WITHMIA-APP/wiki/Self-Hosting
 # =============================================================================
 
 services:

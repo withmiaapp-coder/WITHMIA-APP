@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="public/logos/logo-dark.svg" alt="Withmia" width="200">
+  <img src="public/icons/logo-withmia.png" alt="Withmia" width="200">
 </p>
 
 <h3 align="center">AI-Powered Customer Service Platform for Latin American SMBs</h3>
@@ -19,7 +19,7 @@
 
 ## Features
 
-- **AI Chatbot (MIA)** - GPT-powered assistant with per-company personality, RAG knowledge base, and conversation memory
+- **AI Assistant (WITHMIA)** - GPT-powered assistant with per-company personality, RAG knowledge base, and conversation memory
 - **WhatsApp Integration** - Connect via Evolution API with QR code pairing
 - **Multi-Tenant** - Each company gets isolated Chatwoot account, Qdrant collection, n8n workflow, and WhatsApp instance
 - **Knowledge Base (RAG)** - Upload PDFs and documents, automatic chunking and vector search via Qdrant + OpenAI embeddings
@@ -81,8 +81,8 @@ Admin Dashboard (React) --> Laravel API --> PostgreSQL
 ### 1. Clone the repository
 
 `ash
-git clone https://github.com/withmiaapp-coder/withmia.git
-cd withmia
+git clone https://github.com/withmiaapp-coder/WITHMIA-APP.git
+cd WITHMIA-APP
 `
 
 ### 2. Install dependencies
@@ -161,8 +161,8 @@ Withmia is open-source software licensed under the [GNU Affero General Public Li
 ## Community
 
 - Website: [withmia.com](https://withmia.com)
-- Issues: [GitHub Issues](https://github.com/withmiaapp-coder/withmia/issues)
-- Discussions: [GitHub Discussions](https://github.com/withmiaapp-coder/withmia/discussions)
+- Issues: [GitHub Issues](https://github.com/withmiaapp-coder/WITHMIA-APP/issues)
+- Discussions: [GitHub Discussions](https://github.com/withmiaapp-coder/WITHMIA-APP/discussions)
 
 ---
 
