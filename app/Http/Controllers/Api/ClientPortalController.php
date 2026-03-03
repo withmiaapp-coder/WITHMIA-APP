@@ -60,7 +60,7 @@ class ClientPortalController extends Controller
                     ];
 
                     // Deep links to the app's real pages
-                    $baseUrl = config('app.url', 'https://app.withmia.com');
+                    $baseUrl = config('app.url', 'http://localhost:8080');
                     $appLinks = [
                         'dashboard'      => "{$baseUrl}/dashboard/{$companyModel->slug}",
                         'conversations'  => "{$baseUrl}/dashboard/{$companyModel->slug}/conversaciones",

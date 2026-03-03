@@ -203,7 +203,7 @@ class WebsiteBookingController extends Controller
             'end'   => ['dateTime' => $endDateTime, 'timeZone' => $timezone],
             'attendees' => [
                 ['email' => $validated['email'], 'displayName' => $validated['name']],
-                ['email' => 'contacto@withmia.com', 'displayName' => 'WITHMIA'],
+                ['email' => config('mail.admin_address', 'admin@example.com'), 'displayName' => config('app.name', 'WITHMIA')],
             ],
             'reminders' => [
                 'useDefault' => false,
@@ -275,7 +275,7 @@ class WebsiteBookingController extends Controller
             Mail::html(
                 $this->buildTeamEmailHtml($data),
                 function ($message) use ($data) {
-                    $message->to('contacto@withmia.com')
+                    $message->to(config('mail.admin_address', 'admin@example.com'))
                         ->subject("📅 Agendamiento web: {$data['name']} — {$data['date']} {$data['time']}")
                         ->from(config('mail.from.address'), config('mail.from.name'));
                 }
@@ -320,6 +320,7 @@ class WebsiteBookingController extends Controller
         $motivo = htmlspecialchars($data['motivo']);
         $company = !empty($data['company']) ? htmlspecialchars($data['company']) : null;
         $companyRow = $company ? "<tr><td style=\"padding:4px 12px;color:#94a3b8;font-size:13px;\">Empresa</td><td style=\"padding:4px 12px;color:#e2e8f0;font-size:13px;font-weight:600;\">{$company}</td></tr>" : '';
+        $appUrl = config('app.url', 'http://localhost:8080');
 
         return <<<HTML
 <!DOCTYPE html>
@@ -329,7 +330,7 @@ class WebsiteBookingController extends Controller
 <div style="max-width:520px;margin:0 auto;padding:32px 16px;">
   <!-- Logo -->
   <div style="text-align:center;margin-bottom:32px;">
-    <img src="https://app.withmia.com/icons/logo-withmia.png" alt="WITHMIA" width="140" style="display:inline-block;" />
+    <img src="{$appUrl}/icons/logo-withmia.png" alt="WITHMIA" width="140" style="display:inline-block;" />
   </div>
 
   <!-- Card -->
@@ -395,6 +396,7 @@ HTML;
         $company = !empty($data['company']) ? htmlspecialchars($data['company']) : '—';
         $date = $data['date'];
         $time = $data['time'];
+        $appUrl = config('app.url', 'http://localhost:8080');
 
         return <<<HTML
 <!DOCTYPE html>
@@ -403,7 +405,7 @@ HTML;
 <body style="margin:0;padding:0;background-color:#0f0a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:520px;margin:0 auto;padding:32px 16px;">
   <div style="text-align:center;margin-bottom:24px;">
-    <img src="https://app.withmia.com/icons/logo-withmia.png" alt="WITHMIA" width="120" style="display:inline-block;" />
+    <img src="{$appUrl}/icons/logo-withmia.png" alt="WITHMIA" width="120" style="display:inline-block;" />
   </div>
   <div style="background:#1a1230;border:1px solid rgba(139,92,246,0.15);border-radius:16px;overflow:hidden;">
     <div style="background:rgba(245,158,11,0.08);padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.05);">

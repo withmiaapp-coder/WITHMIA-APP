@@ -127,6 +127,7 @@ const sidebarNav: NavItem[] = [
   {
     id: "_s_changelog", label: "Changelog", icon: Sparkles,
     children: [
+      { id: "changelog-v103", label: "v1.0.3 — Mar 2026" },
       { id: "changelog-v102", label: "v1.0.2 — Feb 2026" },
       { id: "changelog-v101", label: "v1.0.1 — Feb 2026" },
       { id: "changelog-v100", label: "v1.0.0 — Ene 2026" },
@@ -397,6 +398,21 @@ const pages: Record<string, PageMeta> = {
     breadcrumb: ["Docs", "Seguridad", "Auditoría"],
     toc: [{ id: "audit-log", label: "Log de auditoría" }, { id: "retention", label: "Retención" }],
     readTime: "3 min", lastUpdated: "16 Feb 2026",
+  },
+  "changelog-v103": {
+    title: "v1.0.3 — WITHMIA es Open Source",
+    description: "WITHMIA se convierte en software de c\u00f3digo abierto bajo licencia AGPLv3. Auditor\u00eda de seguridad completa, Docker Compose para self-hosting, documentaci\u00f3n comunitaria y correcciones de seguridad.",
+    breadcrumb: ["Docs", "Changelog", "v1.0.3"],
+    toc: [
+      { id: "open-source-release", label: "Open Source con AGPLv3" },
+      { id: "docker-self-hosting", label: "Docker Compose para self-hosting" },
+      { id: "security-audit", label: "Auditor\u00eda de seguridad" },
+      { id: "security-fixes", label: "Correcciones de seguridad" },
+      { id: "community-docs", label: "Documentaci\u00f3n comunitaria" },
+      { id: "repo-cleanup", label: "Limpieza del repositorio" },
+      { id: "breaking-changes", label: "Breaking changes" },
+    ],
+    readTime: "6 min", lastUpdated: "2 Mar 2026",
   },
   "changelog-v102": {
     title: "v1.0.2 — Planes, pagos y control total",
@@ -1428,9 +1444,89 @@ const richContent: Record<string, ContentBlock[]> = {
     { type: "callout", variant: "info", title: "Exportar logs", text: "Exporta logs en formato JSON o CSV desde Configuración → Seguridad → Auditoría, o via API para integrar con tu SIEM (Splunk, Datadog, etc.)." },
   ],
 
+  /* ── Changelog v1.0.3 ── */
+  "changelog-v103": [
+    { type: "callout", variant: "tip", title: "Versión actual", text: "v1.0.3 es la versión más reciente de WITHMIA. Desplegada el 2 de marzo de 2026." },
+
+    { type: "heading", id: "open-source-release", text: "WITHMIA es Open Source — AGPLv3" },
+    { type: "p", text: "Esta es la actualización más significativa en la historia de WITHMIA: el código fuente completo de la plataforma es ahora público bajo la licencia GNU Affero General Public License v3 (AGPLv3). Cualquier persona puede ver, modificar, contribuir y desplegar su propia instancia de WITHMIA." },
+    { type: "list", items: [
+      "Licencia AGPLv3 — la misma licencia usada por Chatwoot, n8n y GitLab. Protege contra forks comerciales sin reciprocidad",
+      "Modelo Open Core — el código de la plataforma es abierto; features enterprise premium (próximamente) serán comerciales",
+      "Repositorio público en github.com/withmiaapp-coder/withmia",
+      "Stack completo visible: Laravel 12 + React 19 + TypeScript + Inertia.js + RoadRunner",
+    ]},
+
+    { type: "heading", id: "docker-self-hosting", text: "Docker Compose para Self-Hosting" },
+    { type: "p", text: "Nuevo archivo docker-compose.yml que levanta toda la infraestructura de WITHMIA en un solo comando. Incluye todos los servicios necesarios para una instancia completa." },
+    { type: "code", code: "git clone https://github.com/withmiaapp-coder/withmia.git\\ncd withmia\\ncp .env.example .env\\ndocker compose up -d", lang: "bash" },
+    { type: "list", items: [
+      "WITHMIA App — Laravel + RoadRunner, construido desde Dockerfile",
+      "PostgreSQL 16 — base de datos principal con inicialización automática de schemas",
+      "Redis 7 — cache, colas y WebSocket broadcasting",
+      "Chatwoot — motor de conversaciones omnicanal",
+      "Qdrant — base de datos vectorial para RAG y búsqueda semántica",
+      "n8n — motor de workflows y automatización",
+      "Evolution API — conexión con WhatsApp Business",
+      "Healthchecks configurados para todos los servicios",
+      "Volúmenes nombrados para persistencia de datos",
+    ]},
+
+    { type: "heading", id: "security-audit", text: "Auditoría de seguridad completa" },
+    { type: "p", text: "Antes de hacer público el repositorio, se realizó una auditoría exhaustiva del código fuente para eliminar cualquier dato sensible, credencial o información interna." },
+    { type: "list", items: [
+      "Verificación de que cero secretos, API keys o tokens están hardcodeados — todos usan env()",
+      "Eliminación de laravel.log y 45 vistas compiladas del tracking de git",
+      "Hostnames internos de Railway reemplazados por localhost en defaults de config",
+      "Emails personales anonimizados en configuración de Horizon",
+      "Números de teléfono reales reemplazados por ejemplos en comentarios de código",
+      "Variable HORIZON_ADMIN_EMAILS añadida en Railway para mantener acceso post-cambio",
+    ]},
+
+    { type: "heading", id: "security-fixes", text: "Correcciones de seguridad" },
+    { type: "p", text: "Se corrigieron múltiples hallazgos de severidad alta y media encontrados durante la auditoría:" },
+    { type: "list", items: [
+      "HIGH: Google OAuth Client ID removido del frontend — ahora se pasa como prop desde el servidor via Inertia",
+      "MEDIUM: Emails hardcodeados (contacto@withmia.com) en WebsiteBookingController reemplazados por config('mail.admin_address')",
+      "MEDIUM: URL hardcodeada (app.withmia.com) en ClientPortalController reemplazada por config('app.url')",
+      "MEDIUM: URLs de logo en templates de email ahora usan config('app.url') dinámicamente",
+      "MEDIUM: Flow.cl Plan IDs internos removidos de comentarios en billing.php",
+      "MEDIUM: Contraseña por defecto de PostgreSQL en docker-compose cambiada de 'withmia' a 'changeme' con advertencia",
+      "MEDIUM: SECRET_KEY_BASE de Chatwoot ahora requiere variable de entorno explícita",
+    ]},
+
+    { type: "heading", id: "community-docs", text: "Documentación comunitaria" },
+    { type: "p", text: "Se crearon todos los archivos estándar de la comunidad open source para facilitar la contribución y la colaboración:" },
+    { type: "list", items: [
+      ".env.example — más de 160 variables de entorno documentadas por sección",
+      "README.md — documentación profesional con badges, stack técnico, arquitectura, quick start y Docker",
+      "CONTRIBUTING.md — guía de contribución con workflow de PRs, convenciones de commits y setup de desarrollo",
+      "CODE_OF_CONDUCT.md — Contributor Covenant v2.1 en inglés",
+      "SECURITY.md — política de reporte de vulnerabilidades con SLA de respuesta (24h/72h/7d)",
+      "LICENSE — texto completo de AGPLv3",
+    ]},
+
+    { type: "heading", id: "repo-cleanup", text: "Limpieza del repositorio" },
+    { type: "list", items: [
+      ".gitignore optimizado — storage/logs/, vistas compiladas, cache, sesiones con patrón .gitkeep",
+      "composer.json actualizado — nombre withmia/withmia, licencia AGPL-3.0-or-later, keywords y homepage",
+      "Dockerfile mejorado — mkdir -p para garantizar directorios de storage en container",
+      "init-databases.sql — script de inicialización para crear todas las bases de datos necesarias",
+    ]},
+
+    { type: "heading", id: "breaking-changes", text: "Breaking changes" },
+    { type: "callout", variant: "warning", title: "Sin breaking changes para usuarios cloud", text: "Si usas WITHMIA en app.withmia.com, esta actualización no requiere ninguna acción. Todos los cambios son internos y de infraestructura." },
+    { type: "p", text: "Para desarrolladores que clonen el repositorio:" },
+    { type: "list", items: [
+      "Los defaults de config ya no apuntan a Railway — usar .env para configurar URLs de servicios",
+      "docker-compose.yml requiere cambiar POSTGRES_PASSWORD antes de producción",
+      "Google Client ID debe configurarse via GOOGLE_CLIENT_ID en .env",
+    ]},
+  ],
+
   /* ── Changelog v1.0.2 ── */
   "changelog-v102": [
-    { type: "callout", variant: "tip", title: "Versión actual", text: "v1.0.2 es la versión más reciente de WITHMIA. Desplegada el 28 de febrero de 2026." },
+    { type: "callout", variant: "info", title: "Versión anterior", text: "v1.0.2 fue desplegada el 28 de febrero de 2026." },
 
     { type: "heading", id: "flow-payments", text: "Integración de pagos con Flow.cl" },
     { type: "p", text: "WITHMIA ahora acepta pagos reales a través de Flow.cl, el principal procesador de pagos de Chile. La integración cubre el ciclo completo: creación de orden, redirección a Flow, confirmación via webhook y activación automática del plan." },

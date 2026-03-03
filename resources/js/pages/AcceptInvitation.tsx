@@ -12,6 +12,7 @@ declare global {
 
 interface AcceptInvitationProps {
   token: string;
+  googleClientId?: string;
 }
 
 interface InvitationData {
@@ -80,7 +81,7 @@ const backgroundStyles = `
   }
 `;
 
-export default function AcceptInvitation({ token }: AcceptInvitationProps) {
+export default function AcceptInvitation({ token, googleClientId }: AcceptInvitationProps) {
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(true);
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
@@ -183,7 +184,7 @@ export default function AcceptInvitation({ token }: AcceptInvitationProps) {
       window.handleInvitationCredentialResponse = handleCredentialResponse;
 
       window.google.accounts.id.initialize({
-        client_id: '870525180915-5reas32antlqnj9ie3gadpr7n28prk0e.apps.googleusercontent.com',
+        client_id: googleClientId || '',
         callback: handleCredentialResponse,
         auto_select: false,
         context: 'signin',

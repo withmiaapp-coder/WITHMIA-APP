@@ -1,4 +1,4 @@
-// SubscriptionPage – v3.2 — WITHMIA 1.0.2
+// SubscriptionPage – v3.2 — WITHMIA 1.0.3
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CreditCard,

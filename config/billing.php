@@ -38,8 +38,8 @@ return [
         'sandbox'    => (bool) env('FLOW_SANDBOX', false),
 
         // Plan IDs en Flow dashboard
-        'plan_monthly_id' => env('FLOW_PLAN_MONTHLY_ID', 'withmia-pro-monthly'),  // Flow ID: 33943
-        'plan_annual_id'  => env('FLOW_PLAN_ANNUAL_ID', 'withmia-pro-annual'),    // Flow ID: 33944
+        'plan_monthly_id' => env('FLOW_PLAN_MONTHLY_ID', 'withmia-pro-monthly'),
+        'plan_annual_id'  => env('FLOW_PLAN_ANNUAL_ID', 'withmia-pro-annual'),
 
         // Adicional IDs en Flow dashboard
         'addon_member_monthly_id' => env('FLOW_ADDON_MEMBER_MONTHLY_ID', '326'),

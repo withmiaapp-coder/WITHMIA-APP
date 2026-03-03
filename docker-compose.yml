@@ -21,7 +21,7 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=withmia
       - DB_USERNAME=postgres
-      - DB_PASSWORD=${POSTGRES_PASSWORD:-withmia}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CHATWOOT_URL=http://chatwoot:3000
@@ -40,10 +40,12 @@ services:
     restart: unless-stopped
 
   # ─── PostgreSQL ────────────────────────────────────────────────────────────
+  # IMPORTANT: Change POSTGRES_PASSWORD before deploying to production!
+  # export POSTGRES_PASSWORD=your_secure_password_here
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-withmia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_USER: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -77,10 +79,10 @@ services:
     image: chatwoot/chatwoot:latest
     environment:
       RAILS_ENV: production
-      SECRET_KEY_BASE: replace_with_secret
+      SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY:-replace_with_a_random_64_char_hex_string}
       POSTGRES_HOST: postgres
       POSTGRES_USERNAME: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-withmia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_DATABASE: chatwoot
       REDIS_URL: redis://redis:6379
     ports:
@@ -109,7 +111,7 @@ services:
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_DATABASE: n8n
       DB_POSTGRESDB_USER: postgres
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-withmia}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       N8N_HOST: localhost
       WEBHOOK_URL: http://localhost:5678
     ports:
@@ -126,7 +128,7 @@ services:
     image: atendai/evolution-api:latest
     environment:
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://postgres:${POSTGRES_PASSWORD:-withmia}@postgres:5432/evolution
+      DATABASE_CONNECTION_URI: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/evolution
     ports:
       - "8081:8080"
     depends_on:

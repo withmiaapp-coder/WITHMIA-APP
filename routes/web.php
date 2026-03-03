@@ -160,7 +160,10 @@ Route::get('/auth-loading', function (Request $request) {
 // 5. INVITACIONES (público, sin auth)
 // ============================================================================
 Route::get('/invitation/accept/{token}', function ($token) {
-    return Inertia::render('AcceptInvitation', ['token' => $token]);
+    return Inertia::render('AcceptInvitation', [
+        'token' => $token,
+        'googleClientId' => config('services.google.client_id'),
+    ]);
 })->name('invitation.accept');
 
 // ============================================================================
