@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\AiUsage;
 use App\Models\Company;
+use App\Mail\AiUsageWarningMail;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class AiUsageService
 {
@@ -65,11 +67,13 @@ class AiUsageService
                 'used' => $usage->messages_used,
                 'limit' => $usage->messages_limit,
             ]);
+            $this->sendUsageWarningOnce($companyId, $usage, $percentage, 'warning_90');
         } elseif ($percentage >= 100) {
             Log::warning("🚫 AI usage limit reached for company {$companyId}", [
                 'used' => $usage->messages_used,
                 'limit' => $usage->messages_limit,
             ]);
+            $this->sendUsageWarningOnce($companyId, $usage, $percentage, 'warning_100');
         }
 
         return $usage;
@@ -104,6 +108,68 @@ class AiUsageService
             'overage_cost_clp' => $overagePacks * $pricePerPack,
             'overage_price_per_pack' => $pricePerPack,
         ];
+    }
+
+    /**
+     * Send a usage warning email ONCE per threshold per billing period.
+     * Uses cache to avoid sending the same warning multiple times.
+     */
+    private function sendUsageWarningOnce(int $companyId, AiUsage $usage, int $percentage, string $thresholdKey): void
+    {
+        $cacheKey = "ai_usage_warning:{$companyId}:{$usage->year}-{$usage->month}:{$thresholdKey}";
+
+        // Already notified for this threshold this month
+        if (Cache::has($cacheKey)) {
+            return;
+        }
+
+        try {
+            $company = Company::find($companyId);
+            if (!$company) {
+                return;
+            }
+
+            // Send to all company admins
+            $admins = $company->users()->where('role', 'admin')->get();
+            if ($admins->isEmpty()) {
+                $admins = $company->users()->take(1)->get(); // fallback to first user
+            }
+
+            $overageEnabled = (bool) config('billing.overage.enabled', false);
+            $overageMessages = max(0, $usage->messages_used - $usage->messages_limit);
+            $overagePacks = $overageMessages > 0 ? (int) ceil($overageMessages / 1000) : 0;
+            $pricePerPack = (int) config('billing.overage.price_per_1000', 5990);
+            $overageCostClp = $overagePacks * $pricePerPack;
+
+            $subscriptionUrl = config('app.url') . "/{$company->slug}/settings/subscription";
+
+            foreach ($admins as $admin) {
+                Mail::to($admin->email)->queue(new AiUsageWarningMail(
+                    companyName: $company->name,
+                    messagesUsed: $usage->messages_used,
+                    messagesLimit: $usage->messages_limit,
+                    percentage: $percentage,
+                    overageEnabled: $overageEnabled,
+                    overageMessages: $overageMessages,
+                    overageCostClp: $overageCostClp,
+                    subscriptionUrl: $subscriptionUrl,
+                ));
+            }
+
+            // Cache for the rest of the billing period (max 31 days)
+            Cache::put($cacheKey, true, now()->endOfMonth());
+
+            Log::info("AI usage warning email sent ({$thresholdKey})", [
+                'company_id' => $companyId,
+                'percentage' => $percentage,
+                'recipients' => $admins->pluck('email')->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send AI usage warning email", [
+                'company_id' => $companyId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

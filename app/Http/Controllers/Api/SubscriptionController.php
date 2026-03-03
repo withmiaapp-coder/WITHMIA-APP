@@ -990,16 +990,26 @@ class SubscriptionController extends Controller
         $companyId = $metadata['company_id'] ?? null;
 
         if ($internalStatus === 'active' && $companyId) {
-            Log::info('dLocal overage payment confirmed', [
-                'company_id' => $companyId,
-                'payment_id' => $paymentId,
-                'period'     => $metadata['period'] ?? 'unknown',
-                'packs'      => $metadata['packs'] ?? 0,
+            // Overage payment confirmed — increase the company's message limit for this period
+            $packs = (int) ($metadata['packs'] ?? 1);
+            $extraMessages = $packs * 1000;
+
+            $usage = \App\Models\AiUsage::currentForCompany($companyId);
+            $usage->increment('messages_limit', $extraMessages);
+
+            Log::info('Overage payment confirmed via dLocal — limit increased', [
+                'company_id'     => $companyId,
+                'packs'          => $packs,
+                'extra_messages' => $extraMessages,
+                'new_limit'      => $usage->fresh()->messages_limit,
+                'payment_id'     => $paymentId,
+                'period'         => $metadata['period'] ?? 'unknown',
             ]);
-        } else {
-            Log::warning('dLocal overage payment failed', [
+        } elseif ($internalStatus === 'cancelled' || $internalStatus === 'expired') {
+            Log::warning('dLocal overage payment failed/cancelled', [
                 'company_id' => $companyId,
                 'status'     => $status,
+                'payment_id' => $paymentId,
             ]);
         }
 
