@@ -10,7 +10,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ### Reporting Bugs
 
-1. Check [existing issues](https://github.com/withmia/withmia/issues) first
+1. Check [existing issues](https://github.com/withmiaapp-coder/withmia/issues) first
 2. Create a new issue with:
    - Clear title and description
    - Steps to reproduce
@@ -20,7 +20,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 ### Suggesting Features
 
-Open a [Discussion](https://github.com/withmia/withmia/discussions) with your idea before creating a PR.
+Open a [Discussion](https://github.com/withmiaapp-coder/withmia/discussions) with your idea before creating a PR.
 
 ### Pull Requests
 
@@ -67,7 +67,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Need Help?
 
-- [GitHub Discussions](https://github.com/withmia/withmia/discussions)
-- [GitHub Issues](https://github.com/withmia/withmia/issues)
+- [GitHub Discussions](https://github.com/withmiaapp-coder/withmia/discussions)
+- [GitHub Issues](https://github.com/withmiaapp-coder/withmia/issues)
 
 Thank you for helping make Withmia better!

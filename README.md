@@ -81,7 +81,7 @@ Admin Dashboard (React) --> Laravel API --> PostgreSQL
 ### 1. Clone the repository
 
 `ash
-git clone https://github.com/withmia/withmia.git
+git clone https://github.com/withmiaapp-coder/withmia.git
 cd withmia
 `
 
@@ -161,8 +161,8 @@ Withmia is open-source software licensed under the [GNU Affero General Public Li
 ## Community
 
 - Website: [withmia.com](https://withmia.com)
-- Issues: [GitHub Issues](https://github.com/withmia/withmia/issues)
-- Discussions: [GitHub Discussions](https://github.com/withmia/withmia/discussions)
+- Issues: [GitHub Issues](https://github.com/withmiaapp-coder/withmia/issues)
+- Discussions: [GitHub Discussions](https://github.com/withmiaapp-coder/withmia/discussions)
 
 ---
 
