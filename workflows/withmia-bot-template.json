@@ -279,9 +279,8 @@
             "parameters": {
                 "model": {
                     "__rl": true,
-                    "value": "gpt-4o-mini",
-                    "mode": "list",
-                    "cachedResultName": "gpt-4o-mini"
+                    "value": "={{ $('WITHMIA Webhook').first().json.body?._withmia?.model?.primary_model || $('WITHMIA Webhook').first().json._withmia?.model?.primary_model || 'gpt-4o-mini' }}",
+                    "mode": "id"
                 },
                 "options": {}
             },
@@ -295,7 +294,7 @@
             "name": "OpenAI Chat Model",
             "credentials": {
                 "openAiApi": {
-                    "id": "okqulnwOmmPYIcOr",
+                    "id": "{{N8N_OPENAI_CREDENTIAL_ID}}",
                     "name": "OpenAi account"
                 }
             }
