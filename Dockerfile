@@ -69,6 +69,10 @@ RUN BROADCAST_DRIVER=null BROADCAST_CONNECTION=log \
         php artisan storage:link || true) \
     && chmod -R 775 storage bootstrap/cache
 
+# Ensure storage directories exist
+RUN mkdir -p storage/framework/{views,cache,sessions} \
+    storage/logs storage/app/public
+
 # Non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /bin/bash appuser \
     && chown -R appuser:appuser /app
