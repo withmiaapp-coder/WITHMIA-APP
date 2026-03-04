@@ -291,7 +291,18 @@ PROMPT;
                 'temperature' => 0.2,
             ]);
 
-            $content = trim($result->choices[0]->message->content);
+            // Defensive: validate that OpenAI returned a valid choices array
+            $resultArray = $result->toArray();
+
+            if (empty($resultArray['choices'][0]['message']['content'] ?? null)) {
+                Log::warning('DailyQuote: OpenAI returned empty or malformed response', [
+                    'keys' => array_keys($resultArray),
+                    'error' => $resultArray['error'] ?? null,
+                ]);
+                return null;
+            }
+
+            $content = trim($resultArray['choices'][0]['message']['content']);
             $content = preg_replace('/^```json\s*/i', '', $content);
             $content = preg_replace('/\s*```$/i', '', $content);
             $content = trim($content);
