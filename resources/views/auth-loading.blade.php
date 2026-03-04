@@ -101,7 +101,7 @@
         .video-overlay.fade-out {
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.2s ease-out;
+            transition: opacity 0.4s ease-out;
         }
         
         .video-container {
@@ -188,12 +188,25 @@
                 console.log('[Auth-Loading] Iframe loaded completely');
             };
             
-            // A los 3 segundos: redirect inmediato (el caché hace que sea rápido)
+            // A los 3 segundos: fade overlay → reveal iframe → navigate
             setTimeout(function() {
-                console.log('[Auth-Loading] Navigating to:', absoluteUrl);
-                // Redirect directo - el iframe ya precargó todo en caché
-                // No hacemos fade porque el redirect es casi instantáneo con caché
-                top.location.replace(absoluteUrl);
+                console.log('[Auth-Loading] Starting transition...');
+                
+                // Step 1: Fade out the overlay to reveal the iframe underneath
+                overlay.classList.add('fade-out');
+                
+                // Step 2: After fade completes, promote iframe and navigate
+                setTimeout(function() {
+                    // Make iframe the top layer (user already sees it from the fade)
+                    backgroundFrame.classList.add('active');
+                    
+                    // Step 3: After a brief moment, do the actual navigation
+                    // The user already sees the app in the iframe, so the flash is invisible
+                    setTimeout(function() {
+                        console.log('[Auth-Loading] Navigating to:', absoluteUrl);
+                        top.location.replace(absoluteUrl);
+                    }, 300);
+                }, 400); // matches fade-out transition duration
             }, 3000);
         })();
     </script>
