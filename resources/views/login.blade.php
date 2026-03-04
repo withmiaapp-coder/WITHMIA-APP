@@ -116,51 +116,28 @@
 
         .login-container {
             position: relative;
-            background: var(--container-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--container-border);
-            box-shadow: var(--container-shadow);
-            border-radius: 30px;
-            max-width: 1000px;
-            width: 90%; margin: auto;
-            overflow: hidden;
-            display: flex;
-            min-height: 500px;
-            transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-        }
-        .left-panel {
-            flex: 1 1 50%;
-            max-width: 50%;
-            background: var(--panel-bg);
-            color: var(--text-primary);
-            padding: 1rem 3rem 1rem 3rem;
+            background: transparent;
+            border: none;
+            box-shadow: none;
             display: flex;
             flex-direction: column;
+            align-items: center;
             justify-content: center;
         }
+        .left-panel {
+            display: none !important;
+        }
         .right-panel {
-            flex: 1 1 50%;
-            max-width: 50%;
-            background: var(--panel-bg);
-            padding: 1rem 3rem 1rem 3rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            background: transparent;
+            padding: 2rem;
         }
 
         .login-container::before {
-            content: "";
- position: absolute;
- top: -2px;
- left: -2px;
- right: -2px;
- bottom: -2px;
- background: var(--border-shimmer);
- background-size: 300% 300%;
- border-radius: 32px;
- z-index: -1;
- animation: borderShimmer 6s ease-in-out infinite;
+            display: none;
         }
 
         .login-logo {
@@ -754,7 +731,7 @@
     </div>
 
     <div class="login-container">
-        <div class="left-panel">
+        <div class="left-panel" style="display:none !important">
             <div class="eco-section">
                 <h2 class="eco-title">Todas tus herramientas,<br><span class="eco-gradient">una sola plataforma</span></h2>
 
@@ -913,18 +890,13 @@
             </div>
         </div>
         <div class="right-panel">
-        <p style="font-size: 0.6rem; opacity: 0.5; margin-bottom: 4px;">Desarrollado por</p>
-        <div class="atlantis-btn" onclick="window.open('https://atlantisproducciones.cl/', '_blank')">
-            <img src="/Logo-Atlantis.webp" style="height: 16px; margin-right: 6px; vertical-align: middle;">
-            <span style="font-size: 11px;">ATLANTIS PRODUCCIONES</span>
-        </div>
         <video class="login-logo" autoplay loop muted playsinline>
             <source src="/logo-animated.webm" type="video/webm">
             <img src="/logo-withmia.webp?v=2025-withmia" alt="WITHMIA Logo">
         </video>
-        <p class="exclusive-text" style="font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350; color: var(--text-primary);">WITH YOU, WITH<strong style="font-weight: 450;">MIA</strong><sup style="font-size: 0.6em; font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-weight: 350;">®</sup></p><br>
+        <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 300; color: var(--text-primary); font-size: 1.5rem; margin-top: 0.5rem; text-align: center; transition: color 0.4s ease;">WITH YOU, WITH<strong style="font-weight: 700;">MIA</strong><sup style="font-size: 0.6em; font-weight: 300;">®</sup></p>
 
-        <div class="google-signin-container">
+        <div class="google-signin-container" style="margin-top: 2rem;">
             <script>
 async function handleCredentialResponse(response) {
     try {
@@ -1002,7 +974,12 @@ function parseJwt(token) {
                  data-logo_alignment="left">
             </div>
         </div>
-        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 45px auto 0px auto; width: 100%;">Al continuar, aceptas nuestros <a href="https://withmia.com/terminos/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Términos de Servicio</a> y lee nuestra <a href="https://withmia.com/privacidad/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Política de Privacidad</a>.</p><br>
+        <p style="text-align: center; font-size: 0.65em; color: var(--text-muted); margin: 30px auto 0px auto; max-width: 350px;">Al continuar, aceptas nuestros <a href="https://withmia.com/terminos/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Términos de Servicio</a> y lee nuestra <a href="https://withmia.com/privacidad/" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">Política de Privacidad</a>.</p>
+        <div style="margin-top: 2rem; display: flex; align-items: center; gap: 6px; opacity: 0.4; cursor: pointer; transition: opacity 0.3s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='0.4'" onclick="window.open('https://atlantisproducciones.cl/', '_blank')">
+            <span style="font-size: 0.6rem; color: var(--text-muted);">Desarrollado por</span>
+            <img src="/Logo-Atlantis.webp" style="height: 14px;">
+            <span style="font-size: 0.6rem; font-weight: 600; letter-spacing: 0.5px; color: var(--text-muted);">ATLANTIS PRODUCCIONES</span>
+        </div>
         </div>
     </div>
 
