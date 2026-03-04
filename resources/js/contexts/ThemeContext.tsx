@@ -549,7 +549,7 @@ function debouncedSaveTheme(themeId: string, themeMode: string, customColor: str
   _saveTimer = setTimeout(async () => {
     try {
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      await fetch('/api/user/theme', {
+      const res = await fetch('/api/user/theme', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -559,8 +559,13 @@ function debouncedSaveTheme(themeId: string, themeMode: string, customColor: str
         credentials: 'same-origin',
         body: JSON.stringify({ theme_id: themeId, theme_mode: themeMode, custom_color: customColor }),
       });
-    } catch {
-      // Silently fail — localStorage is the fallback
+      if (!res.ok) {
+        console.warn('[Theme] Save failed:', res.status, await res.text().catch(() => ''));
+      } else {
+        console.log('[Theme] Saved to DB:', { themeId, themeMode, customColor });
+      }
+    } catch (e) {
+      console.warn('[Theme] Save error:', e);
     }
   }, 800);
 }

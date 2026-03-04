@@ -1,14 +1,12 @@
 @php
     // Detect user's theme mode from DB settings (no need to pass from controller)
-    $themeMode = 'light';
+    $themeMode = null; // null = no DB value, let JS check localStorage
     try {
         $authUser = auth()->user();
         if ($authUser && !empty($authUser->settings['theme_mode'])) {
             $themeMode = $authUser->settings['theme_mode'];
         }
     } catch (\Throwable $e) {}
-    // 'system' will be resolved client-side
-    $isDarkServer = $themeMode === 'dark';
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -22,22 +20,19 @@
             var serverMode = @json($themeMode);
             var isDark = false;
 
-            if (serverMode === 'dark') {
-                isDark = true;
-            } else if (serverMode === 'system') {
-                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            } else if (serverMode === 'light') {
-                isDark = false;
-            } else {
+            // Determine the effective mode: server DB → localStorage → default light
+            var effectiveMode = serverMode;
+            if (!effectiveMode) {
                 // No DB value — check localStorage
-                var stored = null;
-                try { stored = localStorage.getItem('withmia_theme_mode'); } catch(e) {}
-                if (stored === 'dark') {
-                    isDark = true;
-                } else if (stored === 'system') {
-                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                }
+                try { effectiveMode = localStorage.getItem('withmia_theme_mode'); } catch(e) {}
             }
+
+            if (effectiveMode === 'dark') {
+                isDark = true;
+            } else if (effectiveMode === 'system') {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            // 'light' or null/undefined → isDark stays false
 
             if (isDark) {
                 document.documentElement.classList.add('dark-loading');
