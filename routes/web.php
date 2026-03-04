@@ -90,7 +90,11 @@ Route::get('/login', function (Request $request) {
     if ($plan) {
         session(['pending_plan' => $plan]);
     }
-    return view('login', ['plan' => $plan]);
+    return response()
+        ->view('login', ['plan' => $plan])
+        ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        ->header('Pragma', 'no-cache')
+        ->header('Expires', '0');
 })->name('login');
 
 // Alias for /register → same as login (Google OAuth creates account automatically)
