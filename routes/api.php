@@ -167,6 +167,8 @@ Route::middleware(['web', 'auth', 'throttle:api'])->prefix('user')->group(functi
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/avatar', [UserController::class, 'uploadAvatar']);
     Route::post('/cover', [UserController::class, 'uploadCover']);
+    Route::get('/theme', [UserController::class, 'getTheme']);
+    Route::put('/theme', [UserController::class, 'updateTheme']);
 });
 
 // ============================================================================

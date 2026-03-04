@@ -542,6 +542,29 @@ const STORAGE_KEY_THEME = 'withmia_theme_id';
 const STORAGE_KEY_MODE = 'withmia_theme_mode';
 const STORAGE_KEY_CUSTOM = 'withmia_theme_custom_color';
 
+// Debounce helper para no spammear la API en cada cambio rápido
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSaveTheme(themeId: string, themeMode: string, customColor: string | null) {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async () => {
+    try {
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      await fetch('/api/user/theme', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ theme_id: themeId, theme_mode: themeMode, custom_color: customColor }),
+      });
+    } catch {
+      // Silently fail — localStorage is the fallback
+    }
+  }, 800);
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(() => {
     try {
@@ -566,6 +589,42 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
+
+  // On mount: fetch theme from backend and apply (overrides localStorage if backend has data)
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/user/theme', {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' },
+        });
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!json.success || cancelled) return;
+        const { theme_id, theme_mode, custom_color } = json.data;
+        // Only override if backend has a non-default value
+        if (theme_id && theme_id !== 'default') {
+          setThemeIdState(theme_id);
+          try { localStorage.setItem(STORAGE_KEY_THEME, theme_id); } catch {}
+        }
+        if (theme_mode && theme_mode !== 'light') {
+          setModeState(theme_mode as ThemeMode);
+          try { localStorage.setItem(STORAGE_KEY_MODE, theme_mode); } catch {}
+        }
+        if (custom_color) {
+          setCustomColorState(custom_color);
+          try { localStorage.setItem(STORAGE_KEY_CUSTOM, custom_color); } catch {}
+        }
+      } catch {
+        // Not logged in or API unavailable — keep localStorage values
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Detect system dark mode preference
   const [systemDark, setSystemDark] = useState(() => {
@@ -610,16 +669,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setThemeId = useCallback((id: string) => {
     setThemeIdState(id);
-    try {
-      localStorage.setItem(STORAGE_KEY_THEME, id);
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY_THEME, id); } catch {}
+    // Persist to backend
+    const currentMode = localStorage.getItem(STORAGE_KEY_MODE) || 'light';
+    const currentCustom = localStorage.getItem(STORAGE_KEY_CUSTOM) || null;
+    debouncedSaveTheme(id, currentMode, id === 'custom' ? currentCustom : null);
   }, []);
 
   const setMode = useCallback((m: ThemeMode) => {
     setModeState(m);
-    try {
-      localStorage.setItem(STORAGE_KEY_MODE, m);
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY_MODE, m); } catch {}
+    // Persist to backend
+    const currentId = localStorage.getItem(STORAGE_KEY_THEME) || 'default';
+    const currentCustom = localStorage.getItem(STORAGE_KEY_CUSTOM) || null;
+    debouncedSaveTheme(currentId, m, currentId === 'custom' ? currentCustom : null);
   }, []);
 
   const setCustomColor = useCallback((color: string) => {
@@ -629,6 +692,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(STORAGE_KEY_CUSTOM, color);
       localStorage.setItem(STORAGE_KEY_THEME, 'custom');
     } catch {}
+    // Persist to backend
+    const currentMode = localStorage.getItem(STORAGE_KEY_MODE) || 'light';
+    debouncedSaveTheme('custom', currentMode, color);
   }, []);
 
   const resetTheme = useCallback(() => {
@@ -640,6 +706,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(STORAGE_KEY_MODE, 'light');
       localStorage.removeItem(STORAGE_KEY_CUSTOM);
     } catch {}
+    // Persist to backend
+    debouncedSaveTheme('default', 'light', null);
   }, []);
 
   // Apply theme whenever it changes (including dark mode)

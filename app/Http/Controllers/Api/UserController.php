@@ -279,4 +279,70 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * GET /api/user/theme — Devuelve las preferencias de tema del usuario.
+     */
+    public function getTheme(): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'No autenticado'], 401);
+            }
+
+            $settings = $user->settings ?? [];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'theme_id' => $settings['theme_id'] ?? 'default',
+                    'theme_mode' => $settings['theme_mode'] ?? 'light',
+                    'custom_color' => $settings['custom_color'] ?? null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error fetching user theme', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Error obteniendo tema'], 500);
+        }
+    }
+
+    /**
+     * PUT /api/user/theme — Persiste las preferencias de tema del usuario.
+     */
+    public function updateTheme(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'No autenticado'], 401);
+            }
+
+            $validated = $request->validate([
+                'theme_id' => 'required|string|max:50',
+                'theme_mode' => 'required|string|in:light,dark,system',
+                'custom_color' => 'nullable|string|max:20',
+            ]);
+
+            $settings = $user->settings ?? [];
+            $settings['theme_id'] = $validated['theme_id'];
+            $settings['theme_mode'] = $validated['theme_mode'];
+            $settings['custom_color'] = $validated['custom_color'] ?? null;
+
+            $user->settings = $settings;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'theme_id' => $settings['theme_id'],
+                    'theme_mode' => $settings['theme_mode'],
+                    'custom_color' => $settings['custom_color'],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error updating user theme', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Error actualizando tema'], 500);
+        }
+    }
 }
