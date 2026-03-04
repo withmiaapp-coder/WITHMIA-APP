@@ -1,3 +1,15 @@
+@php
+    // Detect user's theme mode from DB settings (no need to pass from controller)
+    $themeMode = 'light';
+    try {
+        $authUser = auth()->user();
+        if ($authUser && !empty($authUser->settings['theme_mode'])) {
+            $themeMode = $authUser->settings['theme_mode'];
+        }
+    } catch (\Throwable $e) {}
+    // 'system' will be resolved client-side
+    $isDarkServer = $themeMode === 'dark';
+@endphp
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,6 +17,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WITHMIA</title>
     <script>
+        // 🎨 Detect dark mode: DB value from server → localStorage fallback → system preference
+        (function() {
+            var serverMode = @json($themeMode);
+            var isDark = false;
+
+            if (serverMode === 'dark') {
+                isDark = true;
+            } else if (serverMode === 'system') {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            } else if (serverMode === 'light') {
+                isDark = false;
+            } else {
+                // No DB value — check localStorage
+                var stored = null;
+                try { stored = localStorage.getItem('withmia_theme_mode'); } catch(e) {}
+                if (stored === 'dark') {
+                    isDark = true;
+                } else if (stored === 'system') {
+                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+            }
+
+            if (isDark) {
+                document.documentElement.classList.add('dark-loading');
+            }
+        })();
+
         // 🔑 PRE-GUARDAR TOKEN INMEDIATAMENTE
         (function() {
             var targetUrl = @json($redirect);
@@ -21,6 +60,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        /* ═══ LIGHT MODE (default) ═══ */
         html, body {
             width: 100%;
             height: 100%;
@@ -28,7 +68,6 @@
             background-color: #ffffff;
         }
         
-        /* Iframe carga el destino DETRÁS del video (z-index 1) */
         .background-frame {
             position: fixed;
             top: 0; left: 0;
@@ -38,18 +77,22 @@
             background: #ffffff;
         }
         
-        /* Cuando iframe está activo, tiene máximo z-index */
         .background-frame.active {
             z-index: 10000;
         }
         
-        /* Video overlay ENCIMA del iframe (z-index 9999) */
         .video-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
             background-color: #ffffff;
-            background-image: radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%), radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%), radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%), radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%), radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%), radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
+            background-image:
+                radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%),
+                radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%),
+                radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%),
+                radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%),
+                radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%),
+                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -89,6 +132,30 @@
         
         .loading-text strong {
             font-weight: 700;
+        }
+
+        /* ═══ DARK MODE ═══ */
+        html.dark-loading, html.dark-loading body {
+            background-color: #0d1017;
+        }
+
+        html.dark-loading .background-frame {
+            background: #0d1017;
+        }
+
+        html.dark-loading .video-overlay {
+            background-color: #0d1017;
+            background-image:
+                radial-gradient(76vw 76vw at 12% 18%, rgba(129,140,248,.08) 0%, rgba(129,140,248,.03) 50%, rgba(129,140,248,0) 70%),
+                radial-gradient(40vw 40vw at 8% 65%, rgba(99,102,241,.2) 0%, rgba(99,102,241,0) 55%),
+                radial-gradient(40vw 40vw at 85% 82%, rgba(59,130,246,.15) 0%, rgba(59,130,246,0) 55%),
+                radial-gradient(35vw 35vw at 85% 8%, rgba(139,92,246,.12) 0%, rgba(139,92,246,0) 55%),
+                radial-gradient(28vw 28vw at 72% 15%, rgba(245,158,11,.08) 0%, rgba(245,158,11,0) 60%),
+                radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.1) 0%, rgba(217,178,76,0) 60%);
+        }
+
+        html.dark-loading .loading-text {
+            color: #e2e8f0;
         }
     </style>
 </head>
