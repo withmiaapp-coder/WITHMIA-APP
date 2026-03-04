@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,17 +13,23 @@
         <meta name="reverb-port" content="{{ config('reverb.apps.apps.0.options.port', 443) }}">
         <meta name="reverb-scheme" content="{{ config('reverb.apps.apps.0.options.scheme', 'https') }}">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        {{-- Inline script to detect dark mode from WITHMIA theme system + system preference --}}
         <script>
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                // Priority: withmia_theme_mode (localStorage) → system preference
+                var mode = null;
+                try { mode = localStorage.getItem('withmia_theme_mode'); } catch(e) {}
 
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var isDark = false;
+                if (mode === 'dark') {
+                    isDark = true;
+                } else if (mode === 'system' || !mode) {
+                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+                // mode === 'light' → isDark stays false
 
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
+                if (isDark) {
+                    document.documentElement.classList.add('dark');
                 }
             })();
         </script>
