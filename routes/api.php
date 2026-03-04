@@ -162,7 +162,7 @@ Route::middleware('throttle:20,1')->prefix('invitation')->group(function () {
 // ============================================================================
 // 5. USUARIO AUTENTICADO (sesión web)
 // ============================================================================
-Route::middleware(['web', 'auth', 'throttle:api'])->prefix('user')->group(function () {
+Route::middleware(['web', 'railway.auth', 'auth', 'throttle:api'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
     Route::put('/profile', [UserController::class, 'updateProfile']);
     Route::post('/avatar', [UserController::class, 'uploadAvatar']);

@@ -46,15 +46,26 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhook.hmac' => \App\Http\Middleware\ValidateWebhookSignature::class,
             'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
+
+        // CRITICAL: Ensure RailwayAuthToken runs BEFORE Laravel's Authenticate middleware.
+        // Without this, Laravel's middleware priority sorting moves Authenticate (priority 5
+        // via AuthenticatesRequests interface) before RailwayAuthToken (no priority), which
+        // breaks token-based auth when Railway Edge strips session cookies.
+        $middleware->prependToPriorityList(
+            \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            \App\Http\Middleware\RailwayAuthToken::class
+        );
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // Interceptar AuthenticationException para NO mostrar "Redirecting to"
+        // Interceptar AuthenticationException
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->expectsJson()) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
-            // Retornar login directamente sin redirect
-            return response(view('login')->render(), 200, ['Content-Type' => 'text/html']);
+            // Redirect to /login properly (302) instead of serving login as 200.
+            // Serving login as 200 at wrong URLs (e.g. /dashboard) causes Google GIS
+            // to auto-trigger credential callbacks, creating an infinite loop.
+            return redirect()->guest('/login');
         });
 
         // CRITICAL: Return proper JSON for ALL API exceptions (prevents empty 500 with Octane/RoadRunner)

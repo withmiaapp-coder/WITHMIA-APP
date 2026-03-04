@@ -26,21 +26,23 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 
 // Obtener auth_token de la URL o de los shared props de Inertia
 const getAuthToken = (): string | null => {
-  // 1) Desde la URL actual (strip from URL immediately to prevent leakage via Referer/history)
+  // 1) Desde localStorage (set by auth-loading.blade.php and app.tsx)
+  const fromStorage = localStorage.getItem('railway_auth_token');
+  if (fromStorage) return fromStorage;
+  // 2) Desde la URL actual
   const urlParams = new URLSearchParams(window.location.search);
   const fromUrl = urlParams.get('auth_token');
   if (fromUrl) {
-    // Remove auth_token from URL to prevent leakage via Referer headers and browser history
-    urlParams.delete('auth_token');
-    const cleanSearch = urlParams.toString();
-    const cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
-    window.history.replaceState({}, '', cleanUrl);
+    // Save to localStorage for subsequent requests, but DON'T strip from URL.
+    // The URL token is needed if the page is reloaded (Railway Edge strips session cookies).
+    // auth-loading.blade.php already saves it, but this is a safety net.
+    try { localStorage.setItem('railway_auth_token', fromUrl); } catch {}
     return fromUrl;
   }
-  // 2) Desde un meta tag (inyectado por el servidor)
+  // 3) Desde un meta tag (inyectado por el servidor)
   const meta = document.querySelector('meta[name="auth-token"]');
   if (meta?.getAttribute('content')) return meta.getAttribute('content');
-  // 3) Desde las props de Inertia (si están disponibles)
+  // 4) Desde las props de Inertia (si están disponibles)
   const inertiaPage = (window as unknown as { __page?: { props?: { railwayAuthToken?: string } } }).__page;
   if (inertiaPage?.props?.railwayAuthToken) return inertiaPage.props.railwayAuthToken;
   return null;

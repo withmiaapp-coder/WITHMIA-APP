@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+﻿import { Head, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { flushSync, createPortal } from 'react-dom';
 import ConversationsInterface from '../components/ConversationsInterface';
@@ -883,11 +883,10 @@ function Dashboard({ user, company, chatwoot, stats, onboardingData, companySlug
       if (error instanceof ApiError) {
         showNotification(error.message, 'error');
         
-        // Si es error de autenticacio�n, redirigir al login
+        // Auth errors are expected when session cookies are missing
+        // (Railway Edge). Don't redirect - the token-based auth handles it.
         if (error.type === 'auth') {
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
+          console.warn('[Dashboard] WhatsApp status auth error - skipping redirect');
         }
       } else {
         // Error handled silently

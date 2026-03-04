@@ -40,36 +40,43 @@ class HandleInertiaRequests extends Middleware
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
         
         // Get auth token from query or authenticated user
-        $railwayAuthToken = $request->query('auth_token');
-        if (!$railwayAuthToken && $request->user()) {
-            $railwayAuthToken = $request->user()->auth_token;
-        }
+        // NOTE: url query is always available, but user() needs lazy eval
+        $queryToken = $request->query('auth_token');
 
-        // Get company timezone — eager load company for serialization to frontend
-        $companyTimezone = 'UTC';
-        $planInfo = ['name' => 'Gratis', 'status' => 'free', 'badge_color' => 'gray', 'trial_days' => null];
-        if ($request->user()) {
-            $request->user()->load('company.activeSubscription');
-            $companyTimezone = $request->user()->company?->timezone ?? 'UTC';
-            $planInfo = $request->user()->company?->plan_info ?? $planInfo;
-        }
+        // CRITICAL: share() is called BEFORE route middleware (railway.auth) runs.
+        // Use closures so values are evaluated at response time (AFTER all middleware).
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
-            'auth' => [
+            'auth' => fn () => [
                 'user' => $request->user(),
             ],
-            'isSuperAdmin' => $request->user()?->isSuperAdmin() ?? false,
-            'companyTimezone' => $companyTimezone,
-            'planInfo' => $planInfo,
+            'isSuperAdmin' => fn () => $request->user()?->isSuperAdmin() ?? false,
+            'companyTimezone' => function () use ($request) {
+                if ($request->user()) {
+                    $request->user()->load('company.activeSubscription');
+                    return $request->user()->company?->timezone ?? 'UTC';
+                }
+                return 'UTC';
+            },
+            'planInfo' => function () use ($request) {
+                $default = ['name' => 'Gratis', 'status' => 'free', 'badge_color' => 'gray', 'trial_days' => null];
+                if ($request->user()) {
+                    $request->user()->load('company.activeSubscription');
+                    return $request->user()->company?->plan_info ?? $default;
+                }
+                return $default;
+            },
             'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'railwayAuthToken' => $railwayAuthToken,
+            'railwayAuthToken' => function () use ($request, $queryToken) {
+                return $queryToken ?: $request->user()?->auth_token;
+            },
         ];
     }
 }

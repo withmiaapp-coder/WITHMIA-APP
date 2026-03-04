@@ -1,4 +1,5 @@
-import { Head } from "@inertiajs/react";
+﻿import { Head } from "@inertiajs/react";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import { useState, useEffect, useRef } from "react";
 import {
   MessageCircle,
@@ -57,11 +58,72 @@ interface OnboardingProps {
   company: OnboardingCompany;
 }
 
-export default function Onboarding({
+function Onboarding({
   currentStep = 1,
   user,
   company,
 }: OnboardingProps) {
+  const { isDark } = useTheme();
+
+  // Dark mode color palette for onboarding
+  const c = {
+    bg: (step: number) => {
+      if (!isDark) return getProgressiveBackground(step);
+      const dark: Record<number, string> = {
+        1: "linear-gradient(135deg, #0d1017 0%, #111827 50%, #1a2332 100%)",
+        2: "linear-gradient(135deg, #0d1017 0%, #111827 50%, #1a2332 100%)",
+        3: "linear-gradient(135deg, #0d1017 0%, #131518 50%, #1a1d22 100%)",
+        4: "linear-gradient(135deg, #0d1017 0%, #14120e 50%, #1c1812 100%)",
+        5: "linear-gradient(135deg, #0d1017 0%, #161310 50%, #1e1a11 100%)",
+        6: "linear-gradient(135deg, #0d1017 0%, #181510 50%, #211c0f 100%)",
+        7: "linear-gradient(135deg, #0d1017 0%, #181510 50%, #211a0e 100%)",
+      };
+      return dark[step] || dark[1];
+    },
+    card: isDark ? "rgba(17, 24, 39, 0.92)" : "rgba(255, 255, 255, 0.92)",
+    cardBorder: isDark ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(255, 255, 255, 0.3)",
+    cardShadow: isDark
+      ? "0 20px 40px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.2)"
+      : "0 20px 40px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.06)",
+    input: isDark ? "rgba(17,24,39,0.95)" : "rgba(255,255,255,0.95)",
+    inputBorder: isDark ? "1px solid #374151" : "1px solid #e2e8f0",
+    inputBorder2: isDark ? "2px solid #374151" : "2px solid #f1f5f9",
+    text: isDark ? "#e5e7eb" : "#1a202c",
+    heading: isDark ? "#e5e7eb" : "#2d3748",
+    title: isDark ? "#f3f4f6" : "#1b1b18",
+    label: isDark ? "#9ca3af" : "#4a5568",
+    muted: isDark ? "#9ca3af" : "#666",
+    itemBg: isDark ? "#1f2937" : "white",
+    itemBorder: isDark ? "2px solid #374151" : "2px solid #f1f5f9",
+    itemShadow: isDark ? "0 4px 15px rgba(0,0,0,0.3)" : "0 4px 15px rgba(0,0,0,0.08)",
+    gridShadow: isDark ? "0 2px 8px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.06)",
+    btnPrev: isDark ? "rgba(31,41,55,0.8)" : "rgba(255,255,255,0.8)",
+    btnPrevDisabled: isDark ? "rgba(31,41,55,0.5)" : "rgba(255,255,255,0.5)",
+    btnPrevText: isDark ? "#9ca3af" : "#4a5568",
+    btnPrevTextDisabled: isDark ? "#4b5563" : "#a0aec0",
+    disabledBg: isDark ? "#374151" : "#e2e8f0",
+    disabledText: isDark ? "#6b7280" : "#a0aec0",
+    progressTrack: isDark ? "#374151" : "#e2e8f0",
+    dropdownBorder: isDark ? "1px solid #374151" : "1px solid #f1f5f9",
+    logoutBg: isDark ? "linear-gradient(145deg, #1f2937, #111827)" : "linear-gradient(145deg, #ffffff, #f0f0f0)",
+    logoutBorder: isDark ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid rgba(0, 0, 0, 0.1)",
+    logoutText: isDark ? "#e5e7eb" : "#000000",
+    logoutIcon: isDark ? "#d1d5db" : "#33363F",
+    counterBg: isDark
+      ? "linear-gradient(135deg, #1f2937 0%, #111827 100%)"
+      : "linear-gradient(135deg, #ffffff 0%, #f7fafc 100%)",
+    improveBtnBg: isDark ? "#1f2937" : "white",
+    improveBtnText: isDark ? "#e5e7eb" : "#333333",
+    dropdownHeaderText: isDark ? "#e5e7eb" : "#000000",
+    suggestionTitle: isDark ? "#e5e7eb" : "#1a1a1a",
+    suggestionDesc: isDark ? "#d1d5db" : "#000000",
+    searchLoadingBg: isDark ? "#111827" : "white",
+    searchLoadingText: isDark ? "#e5e7eb" : "#000000",
+    searchLoadingShadow: isDark
+      ? "0 8px 32px rgba(0,0,0,0.4)"
+      : "0 8px 32px rgba(0, 0, 0, 0.12)",
+  };
+
   const [step, setStep] = useState(() => {
     // Si el servidor indica paso 1 y no hay company, es usuario nuevo - limpiar localStorage
     if (currentStep === 1 && !company) {
@@ -88,11 +150,7 @@ export default function Onboarding({
     const authToken = urlParams.get('auth_token');
     if (authToken) {
       localStorage.setItem('railway_auth_token', authToken);
-      // Strip auth_token from URL to prevent leakage via Referer headers and browser history
-      urlParams.delete('auth_token');
-      const cleanSearch = urlParams.toString();
-      const cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '') + window.location.hash;
-      window.history.replaceState({}, '', cleanUrl);
+      // Don't strip auth_token from URL — needed for page reloads when session cookies are missing
     }
   }, []);
 
@@ -424,7 +482,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -441,11 +499,11 @@ export default function Onboarding({
               style={{
                 width: "100%",
                 padding: "14px 16px",
-                border: "1px solid #e2e8f0",
+                border: c.inputBorder,
                 borderRadius: "12px",
                 fontSize: "16px",
-                color: "#1a202c",
-                backgroundColor: "rgba(255,255,255,0.95)",
+                color: c.text,
+                backgroundColor: c.input,
                 boxSizing: "border-box",
                 transition: "border-color 0.2s ease, box-shadow 0.2s ease"
               }}
@@ -460,7 +518,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -474,11 +532,11 @@ export default function Onboarding({
               style={{
                 width: "100%",
                 padding: "14px 40px 14px 16px",
-                border: "1px solid #e2e8f0",
+                border: c.inputBorder,
                 borderRadius: "12px",
                 fontSize: "16px",
-                color: "#1a202c",
-                backgroundColor: "rgba(255,255,255,0.95)",
+                color: c.text,
+                backgroundColor: c.input,
                 boxSizing: "border-box",
                 cursor: "pointer",
                 backgroundImage: "url('data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23666%22 stroke-width=%222%22><polyline points=%226,9 12,15 18,9%22/></svg>')",
@@ -527,7 +585,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -548,11 +606,11 @@ export default function Onboarding({
               style={{
                 width: "100%",
                 padding: "14px 16px",
-                border: "1px solid #e2e8f0",
+                border: c.inputBorder,
                 borderRadius: "12px",
                 fontSize: "16px",
-                color: "#1a202c",
-                backgroundColor: "rgba(255,255,255,0.95)",
+                color: c.text,
+                backgroundColor: c.input,
                 boxSizing: "border-box",
                 transition: "border-color 0.2s ease, box-shadow 0.2s ease"
               }}
@@ -572,7 +630,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "350",
               textAlign: "center",
             }}
@@ -586,7 +644,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -601,11 +659,11 @@ export default function Onboarding({
               style={{
                 width: "100%",
                 padding: "12px",
-                border: "2px solid #f1f5f9",
+                border: c.inputBorder2,
                 borderRadius: "24px",
                 fontSize: "18px",
-                color: "#1a202c",
-                backgroundColor: "rgba(255,255,255,0.9)",
+                color: c.text,
+                backgroundColor: c.input,
                 boxSizing: "border-box",
               }}
               placeholder="Nombre de tu empresa"
@@ -619,7 +677,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -634,11 +692,11 @@ export default function Onboarding({
                 style={{
                   width: "100%",
                   padding: "15px",
-                  border: "2px solid #f1f5f9",
+                  border: c.inputBorder2,
                   borderRadius: "12px",
                   fontSize: "14px",
-                  color: "#1a202c",
-                  backgroundColor: "rgba(255,255,255,0.9)",
+                  color: c.text,
+                  backgroundColor: c.input,
                   boxSizing: "border-box",
                   minHeight: "120px",
                   resize: "vertical",
@@ -696,8 +754,8 @@ export default function Onboarding({
                   position: "absolute",
                   bottom: "10px",
                   right: "10px",
-                  background: "white",
-                  color: "#333333",
+                  background: c.itemBg,
+                  color: c.improveBtnText,
                   border: "2px solid #DAA520",
                   borderRadius: "20px",
                   padding: "6px 14px",
@@ -736,7 +794,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "350",
               textAlign: "center",
             }}
@@ -750,7 +808,7 @@ export default function Onboarding({
                 display: "block",
                 marginBottom: "8px",
                 fontWeight: "350",
-                color: "#4a5568",
+                color: c.label,
                 fontSize: "18px",
               }}
             >
@@ -763,7 +821,7 @@ export default function Onboarding({
                   alignItems: "center",
                   cursor: "pointer",
                   fontSize: "16px",
-                  color: "#4a5568",
+                  color: c.label,
                   fontWeight: "500"
                 }}
               >
@@ -782,7 +840,7 @@ export default function Onboarding({
                   alignItems: "center",
                   cursor: "pointer",
                   fontSize: "16px",
-                  color: "#4a5568",
+                  color: c.label,
                   fontWeight: "500"
                 }}
               >
@@ -805,7 +863,7 @@ export default function Onboarding({
                   display: "block",
                   marginBottom: "8px",
                   fontWeight: "350",
-                  color: "#4a5568",
+                  color: c.label,
                   fontSize: "18px",
                 }}
               >
@@ -818,11 +876,11 @@ export default function Onboarding({
                 style={{
                   width: "100%",
                   padding: "12px",
-                  border: "2px solid #f1f5f9",
+                  border: c.inputBorder2,
                   borderRadius: "24px",
                   fontSize: "18px",
-                  color: "#1a202c",
-                  backgroundColor: "rgba(255,255,255,0.9)",
+                  color: c.text,
+                  backgroundColor: c.input,
                   boxSizing: "border-box",
                 }}
                 placeholder="Busca tu web aqui o escribe una URL"
@@ -837,14 +895,14 @@ export default function Onboarding({
                     left: "calc(100% + 50px)",
                     width: "450px",
                     borderRadius: "24px",
-                    background: "rgba(255, 255, 255, 0.92)",
+                    background: c.card,
                     backdropFilter: "blur(5px)",
-                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+                    boxShadow: c.searchLoadingShadow,
                     zIndex: 9999,
                     height: "565px",
                     overflow: "hidden",
                     padding: "8px",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    border: c.cardBorder,
                   }}
                 >
                   <div
@@ -852,8 +910,8 @@ export default function Onboarding({
                       padding: "12px 16px",
                       fontSize: "18px",
                       fontWeight: "350",
-                      color: "#000000",
-                      borderBottom: "1px solid #f1f5f9",
+                      color: c.dropdownHeaderText,
+                      borderBottom: c.dropdownBorder,
                       marginBottom: "8px",
                     }}
                   >
@@ -896,7 +954,7 @@ export default function Onboarding({
                         <div
                           style={{
                             fontWeight: "350",
-                            color: "#1a1a1a",
+                            color: c.suggestionTitle,
                             marginBottom: "8px",
                             fontSize: "15px",
                             lineHeight: "1.4",
@@ -907,7 +965,7 @@ export default function Onboarding({
                         <div
                           style={{
                             fontSize: "15px",
-                            color: "#000000",
+                            color: c.dropdownHeaderText,
                             marginBottom: "10px",
                             lineHeight: "1.5",
                           }}
@@ -931,7 +989,7 @@ export default function Onboarding({
                               alignItems: "center",
                               justifyContent: "center",
                               fontSize: "10px",
-                              color: "#333333",
+                              color: c.improveBtnText,
                               fontWeight: "350",
                             }}
                           ></div>
@@ -962,12 +1020,12 @@ export default function Onboarding({
                     width: "450px",
                     padding: "20px",
                     backdropFilter: "blur(5px)",
-                    background: "white",
+                    background: c.itemBg,
                     textAlign: "center",
-                    color: "#000000",
+                    color: c.dropdownHeaderText,
                     boxShadow:
                       "0 20px 40px rgba(0, 0, 0, 0.12), 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    border: c.cardBorder,
                     zIndex: 1000,
                   }}
                 >
@@ -990,7 +1048,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "350",
               textAlign: "center",
             }}
@@ -998,7 +1056,7 @@ export default function Onboarding({
             ¿Cómo trabajará WITHMIA contigo?
           </h2>
           <div style={{ textAlign: "center", marginBottom: "15px" }}>
-            <p style={{ fontSize: "16px", color: "#666", fontWeight: "400" }}>
+            <p style={{ fontSize: "16px", color: c.muted, fontWeight: "400" }}>
               Selecciona el tipo de cliente que atenderás con WITHMIA
             </p>
           </div>
@@ -1064,7 +1122,7 @@ export default function Onboarding({
                   margin: "0 0 8px 0",
                   fontSize: "18px",
                   fontWeight: "700",
-                  color: "#2d3748",
+                  color: c.heading,
                 }}
               >
                 Cliente Interno
@@ -1072,7 +1130,7 @@ export default function Onboarding({
               <p
                 style={{
                   fontSize: "13px",
-                  color: "#666",
+                  color: c.muted,
                   margin: "0 0 15px 0",
                   lineHeight: "1.4",
                 }}
@@ -1149,7 +1207,7 @@ export default function Onboarding({
                   margin: "0 0 8px 0",
                   fontSize: "18px",
                   fontWeight: "700",
-                  color: "#2d3748",
+                  color: c.heading,
                 }}
               >
                 Cliente Externo
@@ -1157,7 +1215,7 @@ export default function Onboarding({
               <p
                 style={{
                   fontSize: "13px",
-                  color: "#666",
+                  color: c.muted,
                   margin: "0 0 15px 0",
                   lineHeight: "1.4",
                 }}
@@ -1191,7 +1249,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "600",
               textAlign: "center",
             }}
@@ -1199,7 +1257,7 @@ export default function Onboarding({
             ¿Cuántas conversaciones tienes al mes?
           </h2>
           <div style={{ textAlign: "center", marginBottom: "30px" }}>
-            <p style={{ fontSize: "16px", color: "#666", fontWeight: "400" }}>
+            <p style={{ fontSize: "16px", color: c.muted, fontWeight: "400" }}>
               Ayúdanos a estimar la cantidad de conversaciones mensuales con
               WITHMIA
             </p>
@@ -1257,7 +1315,7 @@ export default function Onboarding({
                 justifyContent: "space-between",
                 marginTop: "10px",
                 fontSize: "12px",
-                color: "#666",
+                color: c.muted,
               }}
             >
               <span>100</span>
@@ -1276,7 +1334,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "350",
               textAlign: "center",
             }}
@@ -1490,7 +1548,7 @@ export default function Onboarding({
             style={{
               fontSize: "24px",
               marginBottom: "6px",
-              color: "#2d3748",
+              color: c.heading,
               fontWeight: "350",
               textAlign: "center",
             }}
@@ -1548,7 +1606,7 @@ export default function Onboarding({
                 value: "tiktok",
                 label: "TikTok",
                 icon: Video,
-                color: "#000000",
+                color: c.dropdownHeaderText,
               },
               {
                 value: "linkedin",
@@ -1809,9 +1867,9 @@ export default function Onboarding({
           position: "fixed",
           bottom: "20px",
           left: "20px",
-          background: "linear-gradient(145deg, #ffffff, #f0f0f0)",
+          background: c.logoutBg,
           backdropFilter: "blur(10px)",
-          border: "1px solid rgba(0, 0, 0, 0.1)",
+          border: c.logoutBorder,
           borderRadius: "50%",
           width: "28px",
           height: "28px",
@@ -1824,7 +1882,7 @@ export default function Onboarding({
           transition: "all 0.2s ease",
           zIndex: 9999,
           fontSize: "10px",
-          color: "#000000",
+          color: c.dropdownHeaderText,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "scale(1.05)";
@@ -1838,11 +1896,11 @@ export default function Onboarding({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path
             d="M3 3V2H2V3H3ZM12.2929 13.7071C12.6834 14.0976 13.3166 14.0976 13.7071 13.7071C14.0976 13.3166 14.0976 12.6834 13.7071 12.2929L12.2929 13.7071ZM4 11V3H2V11H4ZM3 4H11V2H3V4ZM2.29289 3.70711L12.2929 13.7071L13.7071 12.2929L3.70711 2.29289L2.29289 3.70711Z"
-            fill="#33363F"
+            fill={c.logoutIcon}
           />
           <path
             d="M4 15V15C4 16.8692 4 17.8038 4.40192 18.5C4.66523 18.9561 5.04394 19.3348 5.5 19.5981C6.19615 20 7.13077 20 9 20H14C16.8284 20 18.2426 20 19.1213 19.1213C20 18.2426 20 16.8284 20 14V9C20 7.13077 20 6.19615 19.5981 5.5C19.3348 5.04394 18.9561 4.66523 18.5 4.40192C17.8038 4 16.8692 4 15 4V4"
-            stroke="#33363F"
+            stroke={c.logoutIcon}
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -1852,7 +1910,7 @@ export default function Onboarding({
         style={{
           fontFamily:
             '"Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
-          background: getProgressiveBackground(step),
+          background: c.bg(step),
           minHeight: "100vh",
           display: "flex",
           alignItems: "center",
@@ -1862,9 +1920,9 @@ export default function Onboarding({
       >
         <div
           style={{
-            background: "rgba(255, 255, 255, 0.92)",
+            background: c.card,
             backdropFilter: "blur(5px)",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
+            border: c.cardBorder,
             boxShadow:
               "0 20px 40px rgba(0, 0, 0, 0.12), 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)",
             padding: "20px",
@@ -1897,20 +1955,20 @@ export default function Onboarding({
                 style={{
                   fontSize: "32px",
                   margin: "0",
-                  color: "#1b1b18",
+                  color: c.title,
                   fontWeight: "450",
                 }}
               >
                 Registro
               </h1>
-              <span style={{ fontSize: "18px", color: "#666" }}>
+              <span style={{ fontSize: "18px", color: c.muted }}>
                 Paso {step === 0 ? 1 : step} de 7
               </span>
             </div>
             <div
               style={{
                 width: "100%",
-                backgroundColor: "#e2e8f0",
+                backgroundColor: c.progressTrack,
                 borderRadius: "10px",
                 height: "6px",
                 overflow: "hidden",
@@ -1944,13 +2002,13 @@ export default function Onboarding({
               disabled={step === 1}
               style={{
                 padding: "15px 24px",
-                border: "2px solid #f1f5f9",
+                border: c.inputBorder2,
                 borderRadius: "24px",
                 backgroundColor:
                   step === 1
-                    ? "rgba(255,255,255,0.5)"
-                    : "rgba(255,255,255,0.8)",
-                color: step === 1 ? "#a0aec0" : "#4a5568",
+                    ? c.btnPrevDisabled
+                    : c.btnPrev,
+                color: step === 1 ? c.btnPrevTextDisabled : c.btnPrevText,
                 fontSize: "18px",
                 fontWeight: "350",
                 cursor: step === 1 ? "not-allowed" : "pointer",
@@ -1969,7 +2027,7 @@ export default function Onboarding({
                     ? "linear-gradient(45deg, #FFD700, #FFA500)"
                     : "#e2e8f0",
                 color: isStepValid() && !loading ? "white" : "#a0aec0",
-                border: "1px solid rgba(0, 0, 0, 0.1)",
+                border: c.logoutBorder,
                 borderRadius: "24px",
                 fontSize: "18px",
                 fontWeight: "350",
@@ -1993,3 +2051,13 @@ export default function Onboarding({
     </>
   );
 }
+
+function OnboardingWithTheme(props: OnboardingProps) {
+  return (
+    <ThemeProvider>
+      <Onboarding {...props} />
+    </ThemeProvider>
+  );
+}
+
+export default OnboardingWithTheme;

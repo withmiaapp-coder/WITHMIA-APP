@@ -288,7 +288,7 @@ Route::get('/onboarding', function (Request $request) {
 // ============================================================================
 // 7. DASHBOARD + RUTAS AUTENTICADAS PRINCIPALES
 // ============================================================================
-Route::middleware(['railway.auth', 'auth', 'auth.clean'])->group(function () {
+Route::middleware(['railway.auth', 'auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('dashboard');
