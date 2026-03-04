@@ -70,9 +70,9 @@ Route::get('/', function (Request $request) {
     if (Auth::check()) {
         $user = Auth::user();
         if ($user->company_slug) {
-            return view('transition', ['redirect' => "/dashboard/{$user->company_slug}"]);
+            return view('auth-loading', ['redirect' => "/dashboard/{$user->company_slug}"]);
         }
-        return view('transition', ['redirect' => '/onboarding']);
+        return view('auth-loading', ['redirect' => '/onboarding']);
     }
     // Preserve ?plan= param from pricing page for post-signup checkout
     $plan = $request->query('plan');
@@ -84,7 +84,7 @@ Route::get('/', function (Request $request) {
 
 Route::get('/login', function (Request $request) {
     if (Auth::check()) {
-        return view('transition', ['redirect' => '/onboarding']);
+        return view('auth-loading', ['redirect' => '/onboarding']);
     }
     $plan = $request->query('plan');
     if ($plan) {
@@ -96,7 +96,7 @@ Route::get('/login', function (Request $request) {
 // Alias for /register → same as login (Google OAuth creates account automatically)
 Route::get('/register', function (Request $request) {
     if (Auth::check()) {
-        return view('transition', ['redirect' => '/onboarding']);
+        return view('auth-loading', ['redirect' => '/onboarding']);
     }
     $plan = $request->query('plan');
     if ($plan) {
@@ -134,7 +134,7 @@ Route::get('/logout', function () {
 // 4. TRANSICIONES Y CARGA
 // ============================================================================
 Route::get('/transition-login', function () {
-    return view('transition', ['redirect' => '/login']);
+    return view('auth-loading', ['redirect' => '/login']);
 })->name('transition.login');
 
 Route::get('/transition-to-onboarding', function () {
@@ -142,7 +142,7 @@ Route::get('/transition-to-onboarding', function () {
         Log::error('transition-to-onboarding: User not authenticated after login!');
         return view('login');
     }
-    return view('transition', ['redirect' => '/onboarding']);
+    return view('auth-loading', ['redirect' => '/onboarding']);
 })->name('transition.onboarding');
 
 Route::get('/auth-loading', function (Request $request) {

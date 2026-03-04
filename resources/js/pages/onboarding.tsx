@@ -21,8 +21,6 @@ import {
   Target,
   HelpCircle,
 } from "lucide-react";
-import { showTransitionAndRedirect } from "@/components/TransitionScreen";
-
 interface OnboardingUser {
   full_name?: string;
   phone_country?: string;
