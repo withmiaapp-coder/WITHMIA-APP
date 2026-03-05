@@ -100,24 +100,31 @@ createInertiaApp({
         );
 
         // After React renders: fade out the loading overlay and clean URL params
+        const overlayStart = (window as any).__overlayStart || Date.now();
         requestAnimationFrame(() => {
             const overlay = document.getElementById('__loading_overlay');
             if (overlay) {
-                // Give React a moment to paint the actual UI underneath
+                // Ensure overlay stays visible for at least 1.8s (branded experience)
+                const elapsed = Date.now() - overlayStart;
+                const minVisible = 1800; // ms — enough to see the logo animation
+                const remaining = Math.max(0, minVisible - elapsed);
+
                 setTimeout(() => {
                     overlay.classList.add('fade-out');
                     setTimeout(() => {
                         overlay.remove();
                         document.documentElement.removeAttribute('data-loading-transition');
-                    }, 550);
-                }, 400);
+                    }, 600);
+                }, remaining);
             }
 
-            // Clean transition & auth_token params from URL (keeps it tidy)
+            // Clean transition & auth_token params from URL (keeps it tidy + security)
             if (typeof window !== 'undefined') {
                 const url = new URL(window.location.href);
-                if (url.searchParams.has('transition')) {
-                    url.searchParams.delete('transition');
+                let changed = false;
+                if (url.searchParams.has('transition')) { url.searchParams.delete('transition'); changed = true; }
+                if (url.searchParams.has('auth_token')) { url.searchParams.delete('auth_token'); changed = true; }
+                if (changed) {
                     window.history.replaceState({}, '', url.pathname + (url.search || ''));
                 }
             }

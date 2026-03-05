@@ -35,6 +35,7 @@
                 var urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('transition') === '1') {
                     document.documentElement.setAttribute('data-loading-transition', isDark ? 'dark' : 'light');
+                    window.__overlayStart = Date.now(); // track when overlay appeared
                     // Save auth_token to localStorage if present
                     var authToken = urlParams.get('auth_token');
                     if (authToken) {
@@ -79,7 +80,7 @@
                 justify-content: center;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 opacity: 1;
-                transition: opacity 0.5s ease-out;
+                transition: opacity 0.6s ease-out;
                 pointer-events: all;
                 /* Light mode gradients */
                 background-color: #ffffff;
