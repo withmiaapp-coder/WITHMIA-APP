@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\RedirectResponse;
 
 class GoogleAuthController extends Controller
 {
@@ -21,7 +22,7 @@ class GoogleAuthController extends Controller
         $this->chatwootService = $chatwootService;
     }
 
-    public function authenticate(Request $request): JsonResponse|\Illuminate\Contracts\View\View
+    public function authenticate(Request $request): JsonResponse|RedirectResponse
     {
         try {
             $request->validate([
@@ -171,7 +172,7 @@ class GoogleAuthController extends Controller
     /**
      * Authenticate with Google and accept team invitation
      */
-    public function authenticateWithInvitation(Request $request): JsonResponse|\Illuminate\Contracts\View\View
+    public function authenticateWithInvitation(Request $request): JsonResponse|RedirectResponse
     {
         try {
             $request->validate([

@@ -59,7 +59,7 @@ class OnboardingController extends Controller
         return Inertia::render('onboarding');
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse|\Illuminate\Http\Response
     {
         Log::debug('OnboardingController: store', ['step' => $request->input('step')]);
         
