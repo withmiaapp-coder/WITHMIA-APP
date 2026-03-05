@@ -434,8 +434,9 @@ function Onboarding({
             dashboardUrl += (dashboardUrl.includes('?') ? '&' : '?') + `auth_token=${authToken}`;
           }
           
-          // Redirigir a la página de carga con video
-          window.location.href = `/auth-loading?redirect=${encodeURIComponent(dashboardUrl)}`;
+          // Navigate directly — loading overlay is handled by app.blade.php
+          dashboardUrl += (dashboardUrl.includes('?') ? '&' : '?') + 'transition=1';
+          window.location.href = dashboardUrl;
         }
       } else {
         showNotification(

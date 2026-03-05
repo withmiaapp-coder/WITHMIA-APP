@@ -99,16 +99,27 @@ createInertiaApp({
             </ErrorBoundary>
         );
 
-        // Remove the auth-loading transition overlay after React renders
-        // This gives a seamless fade from the overlay to the actual dashboard
+        // After React renders: fade out the loading overlay and clean URL params
         requestAnimationFrame(() => {
-            const overlay = document.getElementById('__transition_overlay');
+            const overlay = document.getElementById('__loading_overlay');
             if (overlay) {
-                overlay.classList.add('fade-out');
+                // Give React a moment to paint the actual UI underneath
                 setTimeout(() => {
-                    overlay.remove();
-                    document.documentElement.removeAttribute('data-transitioning');
-                }, 350);
+                    overlay.classList.add('fade-out');
+                    setTimeout(() => {
+                        overlay.remove();
+                        document.documentElement.removeAttribute('data-loading-transition');
+                    }, 550);
+                }, 400);
+            }
+
+            // Clean transition & auth_token params from URL (keeps it tidy)
+            if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has('transition')) {
+                    url.searchParams.delete('transition');
+                    window.history.replaceState({}, '', url.pathname + (url.search || ''));
+                }
             }
         });
     },

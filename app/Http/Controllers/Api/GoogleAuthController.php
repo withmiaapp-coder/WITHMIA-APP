@@ -110,19 +110,19 @@ class GoogleAuthController extends Controller
             // Determinar a dónde redirigir según el estado del usuario
             if ($user->company_slug && $user->onboarding_completed) {
                 // Usuario ya completó onboarding - ir al dashboard con auth_token
-                $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
+                $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token . '&transition=1';
                 // If they came from pricing with a plan, send them straight to subscription page
                 if ($plan && in_array($plan, ['pro-monthly', 'pro-annual'])) {
                     $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) 
-                        . '?auth_token=' . $user->auth_token . '&section=subscription&plan=' . $plan;
+                        . '?auth_token=' . $user->auth_token . '&transition=1&section=subscription&plan=' . $plan;
                 }
             } else {
                 // Usuario nuevo o sin completar onboarding - ir a onboarding con auth_token
-                $redirectUrl = route('onboarding') . '?auth_token=' . $user->auth_token;
+                $redirectUrl = route('onboarding') . '?auth_token=' . $user->auth_token . '&transition=1';
             }
             
-            // Mostrar pantalla de carga con video
-            return view('auth-loading', ['redirect' => $redirectUrl]);
+            // Redirect directly — loading overlay is handled inside app.blade.php
+            return redirect($redirectUrl);
 
         } catch (\Exception $e) {
             Log::error('GoogleAuth: Error', ['error' => $e->getMessage()]);
@@ -274,9 +274,9 @@ class GoogleAuthController extends Controller
 
 
             // Redirect to dashboard
-            $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token;
+            $redirectUrl = route('dashboard.company', ['companySlug' => $user->company_slug]) . '?auth_token=' . $user->auth_token . '&transition=1';
             
-            return view('auth-loading', ['redirect' => $redirectUrl]);
+            return redirect($redirectUrl);
 
         } catch (\Exception $e) {
             Log::error('GoogleAuth: Invitation error', ['error' => $e->getMessage()]);

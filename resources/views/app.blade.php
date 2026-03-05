@@ -26,21 +26,21 @@
                 } else if (mode === 'system' || !mode) {
                     isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                 }
-                // mode === 'light' → isDark stays false
 
                 if (isDark) {
                     document.documentElement.classList.add('dark');
                 }
 
-                // Seamless transition from auth-loading: show overlay to prevent white flash
-                // The overlay matches the current theme background so the user sees no flash
-                // during top.location.replace() navigation
-                try {
-                    if (localStorage.getItem('withmia_transitioning')) {
-                        document.documentElement.setAttribute('data-transitioning', '');
-                        localStorage.removeItem('withmia_transitioning');
+                // Detect transition=1 in URL → show loading overlay while React loads
+                var urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('transition') === '1') {
+                    document.documentElement.setAttribute('data-loading-transition', isDark ? 'dark' : 'light');
+                    // Save auth_token to localStorage if present
+                    var authToken = urlParams.get('auth_token');
+                    if (authToken) {
+                        try { localStorage.setItem('railway_auth_token', authToken); } catch(e) {}
                     }
-                } catch(e) {}
+                }
             })();
         </script>
 
@@ -67,26 +67,70 @@
                 transition: opacity 0.15s ease-in;
             }
 
-            /* Seamless auth-loading → dashboard transition overlay */
-            #__transition_overlay {
+            /* ═══ LOADING TRANSITION OVERLAY ═══ */
+            #__loading_overlay {
                 position: fixed;
-                top: 0;
-                left: 0;
-                width: 100vw;
-                height: 100vh;
+                top: 0; left: 0;
+                width: 100vw; height: 100vh;
                 z-index: 99999;
-                background: oklch(1 0 0);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 opacity: 1;
-                transition: opacity 0.3s ease-out;
-                pointer-events: none;
+                transition: opacity 0.5s ease-out;
+                pointer-events: all;
+                /* Light mode gradients */
+                background-color: #ffffff;
+                background-image:
+                    radial-gradient(76vw 76vw at 12% 18%, rgba(230,184,255,.1) 0%, rgba(230,184,255,.05) 50%, rgba(230,184,255,0) 70%),
+                    radial-gradient(40vw 40vw at 8% 65%, rgba(125,77,255,.35) 0%, rgba(125,77,255,0) 55%),
+                    radial-gradient(40vw 40vw at 85% 82%, rgba(59,195,255,.3) 0%, rgba(59,195,255,0) 55%),
+                    radial-gradient(35vw 35vw at 85% 8%, rgba(230,184,255,.18) 0%, rgba(230,184,255,0) 55%),
+                    radial-gradient(28vw 28vw at 72% 15%, rgba(244,226,166,.44) 0%, rgba(244,226,166,0) 60%),
+                    radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.28) 0%, rgba(217,178,76,0) 60%);
             }
 
-            html.dark #__transition_overlay {
-                background: oklch(0.145 0 0);
+            /* Dark mode overlay */
+            html.dark #__loading_overlay {
+                background-color: #0d1017;
+                background-image:
+                    radial-gradient(76vw 76vw at 12% 18%, rgba(129,140,248,.08) 0%, rgba(129,140,248,.03) 50%, rgba(129,140,248,0) 70%),
+                    radial-gradient(40vw 40vw at 8% 65%, rgba(99,102,241,.2) 0%, rgba(99,102,241,0) 55%),
+                    radial-gradient(40vw 40vw at 85% 82%, rgba(59,130,246,.15) 0%, rgba(59,130,246,0) 55%),
+                    radial-gradient(35vw 35vw at 85% 8%, rgba(139,92,246,.12) 0%, rgba(139,92,246,0) 55%),
+                    radial-gradient(28vw 28vw at 72% 15%, rgba(245,158,11,.08) 0%, rgba(245,158,11,0) 60%),
+                    radial-gradient(22vw 22vw at 28% 88%, rgba(217,178,76,.1) 0%, rgba(217,178,76,0) 60%);
             }
 
-            #__transition_overlay.fade-out {
+            #__loading_overlay .video-container {
+                width: 200px; height: 200px;
+                display: flex; justify-content: center; align-items: center;
+            }
+
+            #__loading_overlay video {
+                width: 100%; height: 100%; object-fit: cover;
+            }
+
+            #__loading_overlay .loading-text {
+                margin-top: 2rem;
+                color: #000;
+                font-size: 1.5rem;
+                font-weight: 300;
+            }
+
+            #__loading_overlay .loading-text strong {
+                font-weight: 700;
+            }
+
+            html.dark #__loading_overlay .loading-text {
+                color: #e2e8f0;
+            }
+
+            #__loading_overlay.fade-out {
                 opacity: 0;
+                pointer-events: none;
             }
         </style>
 
@@ -105,10 +149,19 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
-        {{-- Seamless transition overlay: prevents white flash during auth-loading → dashboard --}}
+        {{-- Loading transition overlay: renders instantly ABOVE the Inertia app while React loads --}}
         <script>
-            if (document.documentElement.hasAttribute('data-transitioning')) {
-                document.write('<div id="__transition_overlay"></div>');
+            if (document.documentElement.hasAttribute('data-loading-transition')) {
+                document.write(
+                    '<div id="__loading_overlay">' +
+                        '<div class="video-container">' +
+                            '<video autoplay muted playsinline loop>' +
+                                '<source src="/logo-animated.webm" type="video/webm">' +
+                            '</video>' +
+                        '</div>' +
+                        '<div class="loading-text">WITH YOU, WITH<strong>MIA</strong></div>' +
+                    '</div>'
+                );
             }
         </script>
         @inertia

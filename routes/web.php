@@ -69,10 +69,11 @@ Broadcast::routes(['middleware' => ['web', 'railway.auth']]);
 Route::get('/', function (Request $request) {
     if (Auth::check()) {
         $user = Auth::user();
+        $token = $user->auth_token ? '?auth_token=' . $user->auth_token . '&transition=1' : '?transition=1';
         if ($user->company_slug) {
-            return view('auth-loading', ['redirect' => "/dashboard/{$user->company_slug}"]);
+            return redirect("/dashboard/{$user->company_slug}" . $token);
         }
-        return view('auth-loading', ['redirect' => '/onboarding']);
+        return redirect('/onboarding' . $token);
     }
     // Preserve ?plan= param from pricing page for post-signup checkout
     $plan = $request->query('plan');
@@ -84,7 +85,9 @@ Route::get('/', function (Request $request) {
 
 Route::get('/login', function (Request $request) {
     if (Auth::check()) {
-        return view('auth-loading', ['redirect' => '/onboarding']);
+        $user = Auth::user();
+        $token = $user->auth_token ? '?auth_token=' . $user->auth_token . '&transition=1' : '?transition=1';
+        return redirect('/onboarding' . $token);
     }
     $plan = $request->query('plan');
     if ($plan) {
@@ -96,7 +99,9 @@ Route::get('/login', function (Request $request) {
 // Alias for /register → same as login (Google OAuth creates account automatically)
 Route::get('/register', function (Request $request) {
     if (Auth::check()) {
-        return view('auth-loading', ['redirect' => '/onboarding']);
+        $user = Auth::user();
+        $token = $user->auth_token ? '?auth_token=' . $user->auth_token . '&transition=1' : '?transition=1';
+        return redirect('/onboarding' . $token);
     }
     $plan = $request->query('plan');
     if ($plan) {
@@ -134,15 +139,17 @@ Route::get('/logout', function () {
 // 4. TRANSICIONES Y CARGA
 // ============================================================================
 Route::get('/transition-login', function () {
-    return view('auth-loading', ['redirect' => '/login']);
+    return redirect('/login');
 })->name('transition.login');
 
 Route::get('/transition-to-onboarding', function () {
     if (!Auth::check()) {
         Log::error('transition-to-onboarding: User not authenticated after login!');
-        return view('login');
+        return redirect('/login');
     }
-    return view('auth-loading', ['redirect' => '/onboarding']);
+    $user = Auth::user();
+    $token = $user->auth_token ? '?auth_token=' . $user->auth_token . '&transition=1' : '?transition=1';
+    return redirect('/onboarding' . $token);
 })->name('transition.onboarding');
 
 Route::get('/auth-loading', function (Request $request) {
@@ -153,7 +160,9 @@ Route::get('/auth-loading', function (Request $request) {
         $redirect = '/login';
     }
 
-    return view('auth-loading', ['redirect' => $redirect]);
+    // Direct redirect — loading overlay is now handled inside app.blade.php
+    $separator = str_contains($redirect, '?') ? '&' : '?';
+    return redirect($redirect . $separator . 'transition=1');
 })->name('auth.loading');
 
 // ============================================================================

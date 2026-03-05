@@ -172,8 +172,10 @@ class OnboardingController extends Controller
             }
 
             if ($isCompleted) {
-                // Usar la URL con token ya generada y mostrar pantalla de carga
-                return view('auth-loading', ['redirect' => $completionData['dashboard_url']]);
+                // Redirect directly — loading overlay is handled inside app.blade.php
+                $dashboardUrl = $completionData['dashboard_url'];
+                $separator = str_contains($dashboardUrl, '?') ? '&' : '?';
+                return redirect($dashboardUrl . $separator . 'transition=1');
             }
 
             return back()->with([
