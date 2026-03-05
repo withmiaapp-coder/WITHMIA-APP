@@ -31,6 +31,16 @@
                 if (isDark) {
                     document.documentElement.classList.add('dark');
                 }
+
+                // Seamless transition from auth-loading: show overlay to prevent white flash
+                // The overlay matches the current theme background so the user sees no flash
+                // during top.location.replace() navigation
+                try {
+                    if (localStorage.getItem('withmia_transitioning')) {
+                        document.documentElement.setAttribute('data-transitioning', '');
+                        localStorage.removeItem('withmia_transitioning');
+                    }
+                } catch(e) {}
             })();
         </script>
 
@@ -56,6 +66,28 @@
                 opacity: 1;
                 transition: opacity 0.15s ease-in;
             }
+
+            /* Seamless auth-loading → dashboard transition overlay */
+            #__transition_overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                z-index: 99999;
+                background: oklch(1 0 0);
+                opacity: 1;
+                transition: opacity 0.3s ease-out;
+                pointer-events: none;
+            }
+
+            html.dark #__transition_overlay {
+                background: oklch(0.145 0 0);
+            }
+
+            #__transition_overlay.fade-out {
+                opacity: 0;
+            }
         </style>
 
         <title inertia>@yield('title', 'WITHMIA')</title>
@@ -73,6 +105,12 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
+        {{-- Seamless transition overlay: prevents white flash during auth-loading → dashboard --}}
+        <script>
+            if (document.documentElement.hasAttribute('data-transitioning')) {
+                document.write('<div id="__transition_overlay"></div>');
+            }
+        </script>
         @inertia
  </body>
 </html>

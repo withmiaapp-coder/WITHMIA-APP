@@ -201,8 +201,10 @@
                     backgroundFrame.classList.add('active');
                     
                     // Step 3: After a brief moment, do the actual navigation
-                    // The user already sees the app in the iframe, so the flash is invisible
+                    // Set a transition flag so app.blade.php shows a matching overlay
+                    // to prevent the white flash during top.location.replace()
                     setTimeout(function() {
+                        try { localStorage.setItem('withmia_transitioning', '1'); } catch(e) {}
                         console.log('[Auth-Loading] Navigating to:', absoluteUrl);
                         top.location.replace(absoluteUrl);
                     }, 300);
